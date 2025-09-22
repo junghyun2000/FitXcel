@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, Alert, Keyboard, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -59,6 +60,7 @@ function CalorieGauge({ current, goal }) {
 
 export default function CaloriePage() {
 
+  const insets = useSafeAreaInsets();
   const [current, setCurrent] = useState(0);
   const [goal, setGoal] = useState(2200);
   const [delta, setDelta] = useState('250');
@@ -114,7 +116,7 @@ export default function CaloriePage() {
   const suggestions = useMemo(() => [100, 250, 500], []);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <CalorieGauge current={current} goal={goal} />
 
 
@@ -159,8 +161,8 @@ export default function CaloriePage() {
       </View>
 
 
-      <Text style={styles.helperSmall}>US1 complete: gauge + live counter with per‑day persistence.</Text>
-    </View>
+      <Text style={styles.helperSmall}>US1 complete: gauge + live counter with per-day persistence.</Text>
+    </SafeAreaView>
   );
 }
 
@@ -170,7 +172,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0B1220',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 40,
     gap: 16,
   },
   centerLabels: {
@@ -206,9 +207,6 @@ const styles = StyleSheet.create({
   },
   btnSub: { backgroundColor: '#3B82F6' },
   btnText: { color: '#051B0D', fontWeight: '700' },
-  chipsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  chip: { backgroundColor: '#111827', borderColor: '#1F2937', borderWidth: 1, borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 8 },
-  chipText: { color: '#E5E7EB', fontWeight: '600' },
 
   btnGhost: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#334155' },
   btnGhostText: { color: '#E2E8F0' },
