@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
  // Main BMI Screen Component
-export default function BMIScreen2() {
+export default function BMIScreen() {
   // Safe area insets for notch/Island safe area
   const insets = useSafeAreaInsets();
   // State variables for user inputs
@@ -27,7 +27,7 @@ export default function BMIScreen2() {
   const bmi = useMemo(() => {
     const val = !hm || !wKg ? NaN : wKg / (hm * hm);
     return val;
-  }, [height, weight]);
+  }, [hm, wKg]);
   // Format BMI to one decimal place or show "--" if invalid
   const bmiText = Number.isFinite(bmi) ? (Math.round(bmi * 10) / 10).toFixed(1) : "--";
 
@@ -51,9 +51,9 @@ export default function BMIScreen2() {
         contentContainerStyle={styles.container} // Container styles
         keyboardShouldPersistTaps="handled" // Dismiss keyboard on tap outside
       >
-        // Title
+        {/* Screen title */}
         <Text style={styles.title}>BMI Analysis</Text>
-
+        {/* Gender selection */}
         <View style={styles.row}>
           {["male", "female"].map((s) => (
             <TouchableOpacity
@@ -65,13 +65,13 @@ export default function BMIScreen2() {
             </TouchableOpacity>
           ))}
         </View>
-
+        {/* Input fields for height, weight, and age */}
         <View style={styles.inputs}>
           <Field label="Height" value={height} onChangeText={setHeight} unit="cm" />
           <Field label="Weight" value={weight} onChangeText={setWeight} unit="kg" />
           <Field label="Age" value={age} onChangeText={setAge} unit="yrs" />
         </View>
-
+        {/* Display calculated BMI */}
         <View style={styles.card}>
           <Text style={styles.big}>BMI: {bmiText}</Text>
         </View>
@@ -79,7 +79,7 @@ export default function BMIScreen2() {
     </SafeAreaView>
   );
 }
-
+// Reusable Field Component for input fields
 function Field({ label, value, onChangeText, unit }) {
   return (
     <View style={styles.field}>
@@ -94,7 +94,7 @@ function Field({ label, value, onChangeText, unit }) {
     </View>
   );
 }
-
+// Styles for the components
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#0b0b0c" },
   container: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 4,
     marginBottom: 4,
-  },
+  }, 
   row: { flexDirection: "row", gap: 8, alignSelf: "center" },
   pill: {
     paddingVertical: 8,
