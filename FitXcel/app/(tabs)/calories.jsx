@@ -138,13 +138,6 @@ export default function CaloriePage() {
             <Text style={styles.btnText}>− Sub</Text>
           </Pressable>
         </View>
-        <View style={styles.chipsRow}>
-          {suggestions.map((s) => (
-            <Pressable key={s} style={styles.chip} ownPress={() => add(s)}>
-              <Text style={styles.chipText}>+{s}</Text>
-            </Pressable>
-          ))}
-        </View>
       </View>
 
 
