@@ -26,17 +26,28 @@ export default function WorkoutLog() {
 
   const [workouts, setWorkouts] = useState({});
 
+  // Start new exercise with 1 set
   const addExercise = () => {
     if (!workouts[exercise]) {
       setWorkouts({
         ...workouts,
-        [exercise]: [
-          { id: 1, weight: "", reps: "" },
-          { id: 2, weight: "", reps: "" },
-          { id: 3, weight: "", reps: "" },
-        ],
+        [exercise]: [{ id: 1, weight: "", reps: "" }],
       });
     }
+  };
+
+  // Add a new set for an exercise
+  const addSet = (exerciseName) => {
+    const currentSets = workouts[exerciseName] || [];
+    const newSet = {
+      id: currentSets.length + 1,
+      weight: "",
+      reps: "",
+    };
+    setWorkouts({
+      ...workouts,
+      [exerciseName]: [...currentSets, newSet],
+    });
   };
 
   const updateSet = (exerciseName, setId, field, value) => {
@@ -119,6 +130,14 @@ export default function WorkoutLog() {
                     </View>
                   </View>
                 ))}
+
+                {/* Add set button inside exercise card */}
+                <TouchableOpacity
+                  style={styles.addSetButton}
+                  onPress={() => addSet(exName)}
+                >
+                  <Text style={styles.addSetButtonText}>+ Add Set</Text>
+                </TouchableOpacity>
               </View>
             );
           })}
@@ -151,9 +170,6 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   exerciseTitle: { fontSize: 18, fontWeight: "700", color: "#fff", marginBottom: 12 },
 
@@ -168,7 +184,9 @@ const styles = StyleSheet.create({
 
   inputsRow: { flexDirection: "row", gap: 8 },
   input: {
-    flex: 1,
+    flex: 1,                // let both inputs share space
+    minWidth: 60,           // don’t shrink too much
+    maxWidth: "48%",        // never exceed half the row
     backgroundColor: "#0f1016",
     borderWidth: 1,
     borderColor: "#1f2530",
@@ -177,5 +195,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 16,
+  },
+  addSetButton: {
+    backgroundColor: "#3b82f6",
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 6,
+  },
+  addSetButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  inputsRow: {
+    flexDirection: "row",
+    gap: 8,
+    flex: 1,                // allow row to adapt
+    justifyContent: "space-between",
   },
 });
