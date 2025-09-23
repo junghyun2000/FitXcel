@@ -3,9 +3,10 @@ import {
   View,
   Text,
   TextInput,
-  Button,
+  TouchableOpacity,
   StyleSheet,
   ScrollView,
+  KeyboardAvoidingView,
   Platform,
   StatusBar,
 } from "react-native";
@@ -33,7 +34,6 @@ export default function WorkoutLog() {
           { id: 1, weight: "", reps: "" },
           { id: 2, weight: "", reps: "" },
           { id: 3, weight: "", reps: "" },
-          { id: 4, weight: "", reps: "" },
         ],
       });
     }
@@ -55,72 +55,75 @@ export default function WorkoutLog() {
       }}
       edges={["top", "bottom"]}
     >
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 16 }]}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <Text style={styles.title}>Log Workout</Text>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 16 }]}
+        >
+          <Text style={styles.title}>Log Workout</Text>
 
-        {/* Dropdown to add exercise */}
-        <View style={styles.dropdownWrapper}>
-          <DropDownPicker
-            open={open}
-            value={exercise}
-            items={items}
-            setOpen={setOpen}
-            setValue={setExercise}
-            setItems={setItems}
-            placeholder="Select Exercise"
-            style={styles.dropdown}
-            textStyle={{ color: "#fff" }}
-            dropDownContainerStyle={styles.dropdownContainer}
-            zIndex={1000}
-          />
-          <Button title="Add Exercise" color="#22c55e" onPress={addExercise} />
-        </View>
+          {/* Dropdown to add exercise */}
+          <View style={styles.dropdownWrapper}>
+            <DropDownPicker
+              open={open}
+              value={exercise}
+              items={items}
+              setOpen={setOpen}
+              setValue={setExercise}
+              setItems={setItems}
+              placeholder="Select Exercise"
+              style={styles.dropdown}
+              textStyle={{ color: "#fff" }}
+              dropDownContainerStyle={styles.dropdownContainer}
+              zIndex={1000}
+            />
+            <TouchableOpacity style={styles.addButton} onPress={addExercise}>
+              <Text style={styles.addButtonText}>+ Add Exercise</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Workout Table */}
-        {Object.keys(workouts).map((exName) => {
-          const sets = workouts[exName];
+          {/* Workout Cards */}
+          {Object.keys(workouts).map((exName) => {
+            const sets = workouts[exName];
 
-          return (
-            <View key={exName} style={styles.exerciseCard}>
-              <Text style={styles.exerciseTitle}>{exName}</Text>
+            return (
+              <View key={exName} style={styles.exerciseCard}>
+                <Text style={styles.exerciseTitle}>{exName}</Text>
 
-              <View style={styles.tableHeader}>
-                <Text style={[styles.cell, { flex: 1 }]}>Sets</Text>
-                <Text style={[styles.cell, { flex: 2 }]}>Previous</Text>
-                <Text style={[styles.cell, { flex: 2 }]}>Weight</Text>
-                <Text style={[styles.cell, { flex: 2 }]}>Reps</Text>
+                {sets.map((set) => (
+                  <View key={set.id} style={styles.setCard}>
+                    <Text style={styles.setLabel}>Set {set.id}</Text>
+                    <Text style={styles.previous}>
+                      {set.weight && set.reps ? `${set.weight}kg x ${set.reps}` : "No previous"}
+                    </Text>
+
+                    <View style={styles.inputsRow}>
+                      <TextInput
+                        placeholder="Weight(kg)"
+                        placeholderTextColor="#9ca3af"
+                        value={set.weight}
+                        onChangeText={(text) => updateSet(exName, set.id, "weight", text)}
+                        style={styles.input}
+                        keyboardType="numeric"
+                      />
+                      <TextInput
+                        placeholder="Reps"
+                        placeholderTextColor="#9ca3af"
+                        value={set.reps}
+                        onChangeText={(text) => updateSet(exName, set.id, "reps", text)}
+                        style={styles.input}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                ))}
               </View>
-
-              {sets.map((set) => (
-                <View key={set.id} style={styles.tableRow}>
-                  <Text style={[styles.cell, { flex: 1 }]}>{set.id}</Text>
-                  <Text style={[styles.cell, { flex: 2 }]}>
-                    {set.weight && set.reps ? `${set.weight}kg x ${set.reps}` : "-"}
-                  </Text>
-                  <TextInput
-                    placeholder="Enter here..."
-                    placeholderTextColor="#9ca3af"
-                    value={set.weight}
-                    onChangeText={(text) => updateSet(exName, set.id, "weight", text)}
-                    style={[styles.cell, styles.input, { flex: 2 }]}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    placeholder="Enter here..."
-                    placeholderTextColor="#9ca3af"
-                    value={set.reps}
-                    onChangeText={(text) => updateSet(exName, set.id, "reps", text)}
-                    style={[styles.cell, styles.input, { flex: 2 }]}
-                    keyboardType="numeric"
-                  />
-                </View>
-              ))}
-            </View>
-          );
-        })}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -128,21 +131,51 @@ export default function WorkoutLog() {
 const styles = StyleSheet.create({
   scrollContent: { padding: 16, gap: 16 },
   title: { fontSize: 22, fontWeight: "800", color: "#fff", alignSelf: "center" },
+
   dropdownWrapper: { zIndex: 1000, marginBottom: 16 },
   dropdown: { backgroundColor: "#0f1016", borderColor: "#1f2530", borderRadius: 12, marginBottom: 8 },
   dropdownContainer: { backgroundColor: "#0f1016", borderColor: "#1f2530" },
-  exerciseCard: { backgroundColor: "#121318", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#1f2530" },
-  exerciseTitle: { fontSize: 18, fontWeight: "700", color: "#fff", marginBottom: 8 },
-  tableHeader: { flexDirection: "row", paddingVertical: 6, borderBottomWidth: 1, borderColor: "#1f2530" },
-  tableRow: { flexDirection: "row", paddingVertical: 6, borderBottomWidth: 1, borderColor: "#1f2530" },
-  cell: { color: "#fff", textAlign: "center" },
+
+  addButton: {
+    backgroundColor: "#22c55e",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  addButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+
+  exerciseCard: {
+    backgroundColor: "#121318",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  exerciseTitle: { fontSize: 18, fontWeight: "700", color: "#fff", marginBottom: 12 },
+
+  setCard: {
+    backgroundColor: "#1a1b20",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+  },
+  setLabel: { color: "#22c55e", fontWeight: "600", marginBottom: 4 },
+  previous: { color: "#9ca3af", marginBottom: 8 },
+
+  inputsRow: { flexDirection: "row", gap: 8 },
   input: {
+    flex: 1,
     backgroundColor: "#0f1016",
     borderWidth: 1,
     borderColor: "#1f2530",
     borderRadius: 8,
     color: "#fff",
-    paddingHorizontal: 6,
-    paddingVertical: Platform.OS === "ios" ? 4 : 2,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 16,
   },
 });
