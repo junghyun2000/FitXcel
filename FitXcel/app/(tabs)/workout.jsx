@@ -1,17 +1,8 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
-} from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, StatusBar, } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { Alert } from "react-native";
 
 const exampleExercises = ["Bench Press", "Squats", "Deadlift"];
 
@@ -56,6 +47,25 @@ export default function WorkoutLog() {
     );
     setWorkouts({ ...workouts, [exerciseName]: updatedSets });
   };
+
+  const finishWorkout = async () => {
+    try {
+      const response = await fetch("http://localhost:8081/workout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workouts }),
+      });
+
+      if (!response.ok) throw new Error("Failed to save workout");
+
+      Alert.alert("Success", "Workout saved!");
+      setWorkouts({}); // reset after saving
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Could not save workout");
+    }
+  };
+
 
   return (
     <SafeAreaView
@@ -141,6 +151,11 @@ export default function WorkoutLog() {
               </View>
             );
           })}
+
+          <TouchableOpacity style={styles.finishButton} onPress={finishWorkout}>
+            <Text style={styles.finishButtonText}>Finish Workout</Text>
+          </TouchableOpacity>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -155,38 +170,63 @@ const styles = StyleSheet.create({
   dropdown: { backgroundColor: "#0f1016", borderColor: "#1f2530", borderRadius: 12, marginBottom: 8 },
   dropdownContainer: { backgroundColor: "#0f1016", borderColor: "#1f2530" },
 
-  addButton: {
+  addButton:
+  {
     backgroundColor: "#22c55e",
     paddingVertical: 10,
     borderRadius: 10,
     alignItems: "center",
     marginTop: 8,
   },
-  addButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-
-  exerciseCard: {
+  addButtonText:
+  {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700"
+  },
+  exerciseCard:
+  {
     backgroundColor: "#121318",
     borderRadius: 14,
     padding: 16,
     marginBottom: 16,
     elevation: 3,
   },
-  exerciseTitle: { fontSize: 18, fontWeight: "700", color: "#fff", marginBottom: 12 },
-
-  setCard: {
+  exerciseTitle:
+  {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 12
+  },
+  setCard:
+  {
     backgroundColor: "#1a1b20",
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
   },
-  setLabel: { color: "#22c55e", fontWeight: "600", marginBottom: 4 },
-  previous: { color: "#9ca3af", marginBottom: 8 },
-
-  inputsRow: { flexDirection: "row", gap: 8 },
-  input: {
-    flex: 1,                // let both inputs share space
-    minWidth: 60,           // don’t shrink too much
-    maxWidth: "48%",        // never exceed half the row
+  setLabel:
+  {
+    color: "#22c55e",
+    fontWeight: "600",
+    marginBottom: 4
+  },
+  previous:
+  {
+    color: "#9ca3af",
+    marginBottom: 8
+  },
+  inputsRow:
+  {
+    flexDirection: "row",
+    gap: 8
+  },
+  input:
+  {
+    flex: 1,
+    minWidth: 60,
+    maxWidth: "48%",
     backgroundColor: "#0f1016",
     borderWidth: 1,
     borderColor: "#1f2530",
@@ -196,18 +236,37 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 16,
   },
-  addSetButton: {
+  addSetButton:
+  {
     backgroundColor: "#3b82f6",
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 6,
   },
-  addSetButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
-  inputsRow: {
+  addSetButtonText:
+  {
+    color: "#fff", fontSize: 15, fontWeight: "600"
+  },
+  inputsRow:
+  {
     flexDirection: "row",
     gap: 8,
-    flex: 1,                // allow row to adapt
+    flex: 1,
     justifyContent: "space-between",
+  },
+  finishButton:
+  {
+    backgroundColor: "#ef4444",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  finishButtonText: 
+  {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "700",
   },
 });
