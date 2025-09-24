@@ -2,6 +2,9 @@
 import { Stack, Redirect, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const AUTH_ROUTES = new Set(['/LoginScreen', '/RegisterScreen']);
 
@@ -9,6 +12,7 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
   const pathname = usePathname();
+  const colorScheme = useColorScheme();
 
   // 1) Initial auth check on mount
   useEffect(() => {
@@ -39,29 +43,28 @@ export default function RootLayout() {
     return <Redirect href="/(tabs)" />;
   }
 
-  // 4) Render the appropriate stack
+  // 4) Render the appropriate stack, wrapped in ThemeProvider
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {isAuthed ? (
-        <Stack.Screen name="(tabs)" />
-      ) : (
-        <>
-          <Stack.Screen name="LoginScreen" />
-          <Stack.Screen name="RegisterScreen" />
-        </>
-      )}
-    </Stack>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-        name="saved-meals"
-        options={{
-          title: 'Saved Meals',       // Page title in the header
-          headerBackTitle: 'Calorie page', // Back button label
-        }}
-      />
-        <Stack.Screen name="+not-found" />
+      <Stack screenOptions={{ headerShown: false }}>
+        {isAuthed ? (
+          <>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="saved-meals"
+              options={{
+                title: 'Saved Meals',       // Page title in the header
+                headerBackTitle: 'Calorie page', // Back button label
+              }}
+            />
+            <Stack.Screen name="+not-found" />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="LoginScreen" />
+            <Stack.Screen name="RegisterScreen" />
+          </>
+        )}
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
