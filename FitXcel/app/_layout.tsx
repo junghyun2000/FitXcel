@@ -51,5 +51,19 @@ export default function RootLayout() {
         </>
       )}
     </Stack>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+        name="saved-meals"
+        options={{
+          title: 'Saved Meals',       // Page title in the header
+          headerBackTitle: 'Calorie page', // Back button label
+        }}
+      />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <StatusBar style="auto" />
+    </ThemeProvider>
   );
 }
