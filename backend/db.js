@@ -1,11 +1,14 @@
-const mysql = require('mysql2/promise');
+const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
+const uri = process.env.MONGO_URI;
+const client = new MongoClient(uri);
 
-module.exports = pool;
+async function connectDB() {
+  if (!client.topology || !client.topology.isConnected()) {
+    await client.connect();
+  }
+  return client.db(process.env.MONGO_DB_NAME);
+}
+
+module.exports = connectDB;
