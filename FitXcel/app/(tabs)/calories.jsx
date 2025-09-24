@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, Pressable, Alert, Keyboard, Platform
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 
 const isoDateOnly = (d = new Date()) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString().slice(0,10);
 const today = () => isoDateOnly();
@@ -199,6 +200,17 @@ export default function CaloriePage() {
           <View style={{ gap: 16 }}>
             <View style={{ alignItems: 'center' }}>
               <CalorieGauge current={current} goal={goal} /> 
+            </View>
+
+            {/* Go to savedmeals page */}
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Saved meals</Text>
+              <Pressable
+                style={[styles.btnGhost, { alignSelf: 'flex-start' }]}
+                onPress={() => router.push('/saved-meals')}
+              >
+                <Text style={styles.btnGhostText}>Open saved meals</Text>
+              </Pressable>
             </View>
 
             {/* Quick add row */}
