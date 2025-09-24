@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 const AUTH_ROUTES = new Set(['/LoginScreen', '/RegisterScreen']);
+const APP_HOME = '/(tabs)/calories';
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
@@ -40,7 +41,7 @@ export default function RootLayout() {
   }
   // If authed but you're on an auth route, force to tabs
   if (isAuthed && AUTH_ROUTES.has(pathname)) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href={APP_HOME} />;
   }
 
   // 4) Render the appropriate stack, wrapped in ThemeProvider
@@ -53,8 +54,11 @@ export default function RootLayout() {
             <Stack.Screen
               name="saved-meals"
               options={{
+                headerShown: true, 
                 title: 'Saved Meals',       // Page title in the header
                 headerBackTitle: 'Calorie page', // Back button label
+                headerTintColor: '#fff',
+                headerStyle: { backgroundColor: '#0B1220' },
               }}
             />
             <Stack.Screen name="+not-found" />

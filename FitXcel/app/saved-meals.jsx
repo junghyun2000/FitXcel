@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, FlatList, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiGet, apiPost, apiDel } from './api';
-
+import { Stack } from 'expo-router';
 
 export default function SavedMeals() {
     const [name, setName] = useState('');
@@ -109,6 +109,13 @@ export default function SavedMeals() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <Stack.Screen
+                options={{
+                headerShown: true,         
+                title: 'Saved Meals',      
+                headerBackTitle: 'Calorie' 
+                }}
+            />
             <Text style={styles.title}>Saved Meals</Text>
 
 
