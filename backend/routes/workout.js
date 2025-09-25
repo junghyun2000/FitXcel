@@ -16,33 +16,54 @@ function authMiddleware(req, res, next) {
   });
 }
 
-// Save a workout
+// Save a full workout (all exercises + sets)
 router.post('/', authMiddleware, async (req, res) => {
-  const db = await connectDB();
-  const workouts = db.collection('workouts');
-  const { type, duration } = req.body;
+  try {
+    const db = await connectDB();
+    const workouts = db.collection('workouts');
+    const { workouts: workoutData } = req.body;
 
-  await workouts.insertOne({
-    userId: req.user.id,
-    type,
-    duration,
-    createdAt: new Date()
-  });
+    if (!workoutData || typeof workoutData !== 'object') {
+      return res.status(400).json({ error: 'Invalid workout data' });
+    }
 
-  res.json({ success: true });
+    await workouts.insertOne({
+      userId: req.user.id,
+      workouts: workoutData, // { "Bench Press": [...], "Squats": [...] }
+      createdAt: new Date(),
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error saving workout:', err);
+    res.status(500).json({ error: 'Failed to save workout' });
+  }
 });
 
-// Get all workouts for logged-in user
+// Get ALL workouts for the logged-in user
 router.get('/', authMiddleware, async (req, res) => {
-  const db = await connectDB();
-  const workouts = db.collection('workouts');
+  try {
+    const db = await connectDB();
+    const workouts = db.collection('workouts');
 
-  const list = await workouts
-    .find({ userId: req.user.id })
-    .sort({ createdAt: -1 })
-    .toArray();
+    const list = await workouts
+      .find({ userId: req.user.id })
+      .sort({ createdAt: -1 }) // newest first
+      .toArray();
 
-  res.json({ workouts: list });
+    // Return workouts with id, date, and exercises
+    res.json({
+      workouts: list.map(w => ({
+        id: w._id.toString(),       // unique ID for React keys
+        date: w.createdAt,          // stored timestamp
+        exercises: w.workouts       // { "Bench Press": [...], "Squats": [...] }
+      }))
+    });
+  } catch (err) {
+    console.error('Error fetching workouts:', err);
+    res.status(500).json({ error: 'Failed to fetch workouts' });
+  }
 });
+
 
 module.exports = router;

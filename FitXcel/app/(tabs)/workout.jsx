@@ -21,7 +21,7 @@ export default function WorkoutLog() {
   const [workouts, setWorkouts] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Fetch workouts from backend when screen loads
+  // Fetch workouts from backend when screen loads
   useEffect(() => {
     async function fetchWorkouts() {
       try {
@@ -36,14 +36,15 @@ export default function WorkoutLog() {
         if (res.ok) {
           const transformedWorkouts = {};
 
+          // Each session might have multiple exercises
           Object.keys(data.workouts || {}).forEach((exName) => {
             const sets = Array.isArray(data.workouts[exName]) ? data.workouts[exName] : [];
             transformedWorkouts[exName] = sets.map((s, index) => ({
               id: index + 1,
               weight: "", // empty input
               reps: "",   // empty input
-              previousWeight: s.weight || "",
-              previousReps: s.reps || "",
+              previousWeight: s.weight || 0, // show last logged weight
+              previousReps: s.reps || 0,     // show last logged reps
             }));
           });
 
@@ -61,6 +62,7 @@ export default function WorkoutLog() {
 
     fetchWorkouts();
   }, []);
+
 
   // Start new exercise with 1 set
   const addExercise = () => {
@@ -109,14 +111,34 @@ export default function WorkoutLog() {
         return;
       }
 
-      // Send current workout to backend
+      // Build payload, only include sets with data
+      const payloadWorkouts = {};
+      Object.keys(workouts).forEach((exName) => {
+        const sets = workouts[exName] || [];
+        const filteredSets = sets
+          .filter(s => s.weight || s.reps || s.previousWeight || s.previousReps) // keep sets with any data
+          .map((s) => ({
+            weight: s.weight || s.previousWeight || 0,
+            reps: s.reps || s.previousReps || 0,
+          }));
+        if (filteredSets.length > 0) {
+          payloadWorkouts[exName] = filteredSets;
+        }
+      });
+
+      if (Object.keys(payloadWorkouts).length === 0) {
+        Alert.alert("No Data", "Please enter at least one set before finishing.");
+        return;
+      }
+
+      // POST to backend
       const response = await fetch("http://localhost:4000/workout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ workouts }),
+        body: JSON.stringify({ workouts: payloadWorkouts }),
       });
 
       const data = await response.json();
@@ -124,19 +146,17 @@ export default function WorkoutLog() {
 
       Alert.alert("Success", "Workout saved!");
 
-      // Clear inputs but keep previous values
+      // Clear input fields but keep previous values
       const clearedWorkouts = {};
       Object.keys(workouts).forEach((exName) => {
-        const currentSets = Array.isArray(workouts[exName]) ? workouts[exName] : [];
-        if (currentSets.length > 0) {
-          clearedWorkouts[exName] = currentSets.map((s) => ({
-            id: s.id,
-            weight: "",
-            reps: "",
-            previousWeight: s.weight ? s.weight : s.previousWeight || "",
-            previousReps: s.reps ? s.reps : s.previousReps || "",
-          }));
-        }
+        const currentSets = workouts[exName] || [];
+        clearedWorkouts[exName] = currentSets.map((s) => ({
+          id: s.id,
+          weight: "",
+          reps: "",
+          previousWeight: s.weight ? s.weight : s.previousWeight || "",
+          previousReps: s.reps ? s.reps : s.previousReps || "",
+        }));
       });
 
       setWorkouts(clearedWorkouts);
@@ -177,7 +197,6 @@ export default function WorkoutLog() {
         >
           <Text style={styles.title}>Log Workout</Text>
 
-          {/* Dropdown to add exercise */}
           <View style={styles.dropdownWrapper}>
             <DropDownPicker
               open={open}
@@ -219,7 +238,7 @@ export default function WorkoutLog() {
 
                       <View style={styles.inputsRow}>
                         <TextInput
-                          placeholder="Weight(kg)"
+                          placeholder={set.previousWeight ? `${set.previousWeight}kg` : "Weight(kg)"}
                           placeholderTextColor="#9ca3af"
                           value={set.weight}
                           onChangeText={(text) => updateSet(exName, set.id, "weight", text)}
@@ -227,7 +246,7 @@ export default function WorkoutLog() {
                           keyboardType="numeric"
                         />
                         <TextInput
-                          placeholder="Reps"
+                          placeholder={set.previousReps ? `${set.previousReps} reps` : "Reps"}
                           placeholderTextColor="#9ca3af"
                           value={set.reps}
                           onChangeText={(text) => updateSet(exName, set.id, "reps", text)}
