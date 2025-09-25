@@ -2,11 +2,17 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { useFonts } from 'expo-font';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+
+  const [fontsLoaded] = useFonts({
+    MontserratBold: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
+  if (!fontsLoaded) return null;
 
   async function handleLogin() {
     try {
@@ -29,7 +35,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back!</Text>
+      <Text style={[styles.title, { fontFamily: 'MontserratBold' }]}>FitXcel</Text>
       <Text style={styles.subtitle}>Sign in to continue</Text>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Email</Text>
