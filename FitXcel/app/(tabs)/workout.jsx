@@ -5,29 +5,32 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
+// Example exercise list for dropdown
 const exampleExercises = ["Bench Press", "Squats", "Deadlift"];
 
 export default function WorkoutLog() {
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets(); // for safe area padding
+  const router = useRouter(); // navigation
 
-  const router = useRouter();
-
-  const [open, setOpen] = useState(false);
-  const [exercise, setExercise] = useState(exampleExercises[0]);
+  // Dropdown state
+  const [open, setOpen] = useState(false); // controls dropdown open/close
+  const [exercise, setExercise] = useState(exampleExercises[0]); // selected exercise
   const [items, setItems] = useState(
-    exampleExercises.map((ex) => ({ label: ex, value: ex }))
+    exampleExercises.map((ex) => ({ label: ex, value: ex })) // dropdown options
   );
 
-  const [workouts, setWorkouts] = useState({});
-  const [loading, setLoading] = useState(true);
+  // Workout log state
+  const [workouts, setWorkouts] = useState({}); // object keyed by exercise name
+  const [loading, setLoading] = useState(true); // loading state when fetching
 
-  // Fetch workouts from backend when screen loads
+  // Fetch workouts from backend when component mounts
   useEffect(() => {
     async function fetchWorkouts() {
       try {
-        const token = await AsyncStorage.getItem("token");
-        if (!token) return; // not logged in
+        const token = await AsyncStorage.getItem("token"); // get auth token
+        if (!token) return; // skip if not logged in
 
+        // fetch workouts from API
         const res = await fetch("http://localhost:4000/workout", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -36,15 +39,15 @@ export default function WorkoutLog() {
         if (res.ok) {
           const transformedWorkouts = {};
 
-          // Each session might have multiple exercises
+          // transform server data into local format
           Object.keys(data.workouts || {}).forEach((exName) => {
             const sets = Array.isArray(data.workouts[exName]) ? data.workouts[exName] : [];
             transformedWorkouts[exName] = sets.map((s, index) => ({
               id: index + 1,
-              weight: "", // empty input
-              reps: "",   // empty input
-              previousWeight: s.weight || 0, // show last logged weight
-              previousReps: s.reps || 0,     // show last logged reps
+              weight: "", // empty until user inputs
+              reps: "",   // empty until user inputs
+              previousWeight: s.weight || 0, // last recorded weight
+              previousReps: s.reps || 0,     // last recorded reps
             }));
           });
 
@@ -56,15 +59,15 @@ export default function WorkoutLog() {
         console.error(err);
         Alert.alert("Error", "Could not connect to server.");
       } finally {
-        setLoading(false);
+        setLoading(false); // stop loading spinner
       }
     }
 
     fetchWorkouts();
-  }, []);
+  }, []); // runs once when component mounts
 
 
-  // Start new exercise with 1 set
+  // Add a new exercise with 1 empty set
   const addExercise = () => {
     if (!workouts[exercise]) {
       setWorkouts({
@@ -74,11 +77,11 @@ export default function WorkoutLog() {
     }
   };
 
-  // Add a new set for an exercise
+  // Add a new set to an existing exercise
   const addSet = (exerciseName) => {
     const currentSets = workouts[exerciseName] || [];
     const newSet = {
-      id: currentSets.length + 1,
+      id: currentSets.length + 1, // increment set number
       weight: "",
       reps: "",
     };
@@ -88,12 +91,14 @@ export default function WorkoutLog() {
     });
   };
 
+  // Update a specific field (weight/reps) for a given set
   const updateSet = (exerciseName, setId, field, value) => {
     const updatedSets = workouts[exerciseName].map((set) => {
       if (set.id === setId) {
         return {
           ...set,
-          [field]: value, // update only the input value
+          [field]: value, // update weight or reps
+          // keep previous values unless user overwrites
           previousWeight: field === "weight" && value ? value : set.previousWeight,
           previousReps: field === "reps" && value ? value : set.previousReps,
         };
@@ -103,6 +108,7 @@ export default function WorkoutLog() {
     setWorkouts({ ...workouts, [exerciseName]: updatedSets });
   };
 
+  // Save workout to backend
   const finishWorkout = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -111,12 +117,12 @@ export default function WorkoutLog() {
         return;
       }
 
-      // Build payload, only include sets with data
+      // Build payload: only include sets with data
       const payloadWorkouts = {};
       Object.keys(workouts).forEach((exName) => {
         const sets = workouts[exName] || [];
         const filteredSets = sets
-          .filter(s => s.weight || s.reps || s.previousWeight || s.previousReps) // keep sets with any data
+          .filter(s => s.weight || s.reps || s.previousWeight || s.previousReps) // skip empty sets
           .map((s) => ({
             weight: s.weight || s.previousWeight || 0,
             reps: s.reps || s.previousReps || 0,
@@ -131,7 +137,7 @@ export default function WorkoutLog() {
         return;
       }
 
-      // POST to backend
+      // POST workout to server
       const response = await fetch("http://localhost:4000/workout", {
         method: "POST",
         headers: {
@@ -146,7 +152,7 @@ export default function WorkoutLog() {
 
       Alert.alert("Success", "Workout saved!");
 
-      // Clear input fields but keep previous values
+      // Reset input fields but keep last entered values as "previous"
       const clearedWorkouts = {};
       Object.keys(workouts).forEach((exName) => {
         const currentSets = workouts[exName] || [];
@@ -167,8 +173,7 @@ export default function WorkoutLog() {
     }
   };
 
-
-
+  // Show loading spinner while fetching workouts
   if (loading) {
     return (
       <View style={[styles.scrollContent, { flex: 1, justifyContent: "center", alignItems: "center" }]}>
@@ -177,7 +182,6 @@ export default function WorkoutLog() {
       </View>
     );
   }
-
 
   return (
     <SafeAreaView
@@ -197,6 +201,7 @@ export default function WorkoutLog() {
         >
           <Text style={styles.title}>Log Workout</Text>
 
+          {/* Dropdown + add exercise button */}
           <View style={styles.dropdownWrapper}>
             <DropDownPicker
               open={open}
@@ -216,26 +221,28 @@ export default function WorkoutLog() {
             </TouchableOpacity>
           </View>
 
-          {/* Workout Cards */}
+          {/* Render workout cards for each exercise */}
           {Object.keys(workouts)
             .filter(exName => workouts[exName] && workouts[exName].length > 0)
             .map((exName) => {
-              const sets = workouts[exName]; // already an array
+              const sets = workouts[exName]; // array of sets
               return (
                 <View key={exName} style={styles.exerciseCard}>
                   <Text style={styles.exerciseTitle}>{exName}</Text>
 
+                  {/* Render each set for this exercise */}
                   {sets.map((set) => (
                     <View key={set.id} style={styles.setCard}>
                       <Text style={styles.setLabel}>Set {set.id}</Text>
 
-                      {/* Show previous set only if it exists */}
+                      {/* Show last session data if available */}
                       <Text style={styles.previous}>
                         {set.previousWeight && set.previousReps
                           ? `${set.previousWeight}kg x ${set.previousReps}`
                           : "No previous"}
                       </Text>
 
+                      {/* Inputs for weight and reps */}
                       <View style={styles.inputsRow}>
                         <TextInput
                           placeholder={set.previousWeight ? `${set.previousWeight}kg` : "Weight(kg)"}
@@ -257,6 +264,7 @@ export default function WorkoutLog() {
                     </View>
                   ))}
 
+                  {/* Button to add another set */}
                   <TouchableOpacity
                     style={styles.addSetButton}
                     onPress={() => addSet(exName)}
@@ -267,10 +275,12 @@ export default function WorkoutLog() {
               );
             })}
 
+          {/* Save workout button */}
           <TouchableOpacity style={styles.finishButton} onPress={finishWorkout}>
             <Text style={styles.finishButtonText}>Finish Workout</Text>
           </TouchableOpacity>
 
+          {/* Navigate to history screen */}
           <TouchableOpacity
             style={[styles.finishButton, { backgroundColor: "#3b82f6" }]}
             onPress={() => router.push("/workouthistory")}
@@ -284,6 +294,7 @@ export default function WorkoutLog() {
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
   scrollContent: { padding: 16, gap: 16 },
   title: { fontSize: 22, fontWeight: "800", color: "#fff", alignSelf: "center" },

@@ -4,20 +4,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
 export default function WorkoutHistory() {
-  const router = useRouter();
-  const [workouts, setWorkouts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter(); // router for navigation
+  const [workouts, setWorkouts] = useState([]); // state to store workout sessions
+  const [loading, setLoading] = useState(true); // loading indicator
 
+  // Fetch workouts from backend when component mounts
   useEffect(() => {
     const fetchWorkouts = async () => {
       try {
-        const token = await AsyncStorage.getItem("token");
+        const token = await AsyncStorage.getItem("token"); // get saved JWT token
         if (!token) {
-          Alert.alert("Not Logged In", "Please log in first.");
+          Alert.alert("Not Logged In", "Please log in first."); // notify if no token
           setLoading(false);
           return;
         }
 
+        // request workouts from API
         const res = await fetch("http://localhost:4000/workout", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -25,10 +27,11 @@ export default function WorkoutHistory() {
         const data = await res.json();
 
         if (res.ok) {
+          // normalise workout data into a consistent format
           const formattedWorkouts = (data.workouts || []).map((w, idx) => ({
-            id: w.id ? w.id : `fallback-${idx}`,
-            date: w.date ? new Date(w.date) : new Date(),
-            exercises: w.exercises || {},
+            id: w.id ? w.id : `fallback-${idx}`, // ensure unique id
+            date: w.date ? new Date(w.date) : new Date(), // parse or fallback to now
+            exercises: w.exercises || {}, // exercises with sets
           }));
           setWorkouts(formattedWorkouts);
         } else {
@@ -38,13 +41,14 @@ export default function WorkoutHistory() {
         console.error(err);
         Alert.alert("Error", "Could not connect to server.");
       } finally {
-        setLoading(false);
+        setLoading(false); // stop loading spinner
       }
     };
 
     fetchWorkouts();
-  }, []);
+  }, []); // run once on mount
 
+  // Show loading spinner while fetching data
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
@@ -56,6 +60,7 @@ export default function WorkoutHistory() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0b0b0c" }}>
+      {/* Header with back button */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Back</Text>
@@ -63,12 +68,16 @@ export default function WorkoutHistory() {
         <Text style={styles.headerTitle}>Workout History</Text>
       </View>
 
+      {/* Main scrollable content */}
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 16 }}>
         {workouts.length === 0 ? (
+          // Show message if no workouts are found
           <Text style={styles.noData}>No workouts logged yet.</Text>
         ) : (
+          // Render each workout session
           workouts.map((session) => (
             <View key={session.id} style={styles.sessionCard}>
+              {/* Session date */}
               <Text style={styles.sessionDate}>
                 {session.date.toLocaleString(undefined, {
                   weekday: "short",
@@ -81,10 +90,12 @@ export default function WorkoutHistory() {
                 })}
               </Text>
 
+              {/* Exercises inside this session */}
               {Object.keys(session.exercises).map((exerciseName) => (
                 <View key={`${session.id}-${exerciseName}`} style={styles.exerciseCard}>
                   <Text style={styles.exerciseTitle}>{exerciseName}</Text>
 
+                  {/* Sets inside each exercise */}
                   {session.exercises[exerciseName].map((set, index) => (
                     <Text
                       key={`${session.id}-${exerciseName}-${set.weight}-${set.reps}-${index}`}
@@ -103,6 +114,7 @@ export default function WorkoutHistory() {
   );
 }
 
+// Styles for the UI
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
@@ -169,7 +181,8 @@ const styles = StyleSheet.create({
     color: "#22c55e", 
     fontSize: 18, 
     fontWeight: "700", 
-    marginBottom: 6 },
+    marginBottom: 6 
+  },
   setText: { 
     color: "#fff", 
     fontSize: 16, 
