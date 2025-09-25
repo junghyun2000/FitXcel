@@ -2,15 +2,15 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, Alert, Keyboard, Platform, FlatList, AppState } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { apiGet, apiPost, apiDel } from '../api';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 const isoDateOnly = (d = new Date()) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString().slice(0,10);
 const today = () => isoDateOnly();
-const entriesKey = () => `calories:entries:${today()}`; 
-const goalKey = 'calorie_goal';
 const minutesSinceMidnight = () => { const d = new Date(); return d.getHours()*60 + d.getMinutes(); };
-const DAY_END_MINUTES = 23*60 + 49;
+const DAY_END_MINUTES = 23*60 + 59;
 
 // Circular gauge for calories (goal vs current)
 function CalorieGauge({ current, goal }) {
@@ -59,7 +59,6 @@ function CalorieGauge({ current, goal }) {
 export default function CaloriePage() {
   const insets = useSafeAreaInsets();
 
-  // Goal + entries (today)
   const [goal, setGoal] = useState(2200);
   const [entries, setEntries] = useState([]);
   const entriesArr = Array.isArray(entries) ? entries : [];
@@ -68,125 +67,156 @@ export default function CaloriePage() {
     [entriesArr]
   );
 
-  // Quick add input (adds a generic entry)
   const [delta, setDelta] = useState('250');
-
-
-  // Food form
   const [name, setName] = useState('');
   const [cals, setCals] = useState('');
   const [mealType, setMealType] = useState('breakfast');
 
-
-  // Track date changes for midnight reset
-  const lastDateRef = useRef(new Date().toDateString());
-
-  // Load today's calories + goal on mount
   useEffect(() => {
-    (async () => {
+    const loadData = async () => {
       try {
-        const [savedEntriesJson, savedGoal] = await Promise.all([
-          AsyncStorage.getItem(goalKey),
-          AsyncStorage.getItem(entriesKey()),
-        ]);
-        if (savedGoal) setGoal(Number(savedGoal) || 2200);
-        if (savedEntriesJson) {
-          try {
-            const parsed = JSON.parse(savedEntriesJson);
-            setEntries(Array.isArray(parsed) ? parsed : []);
-          } catch {
-            setEntries([]);
-          }
-        } else {
-          setEntries([]);
-        }
-      } catch (e) {
-        console.warn('Load error', e);
+        await fetchTodayEntries();
+        setGoal(2200); // Replace with DB goal if needed
+      } catch (err) {
+        console.warn('Error loading today\'s data', err);
         setEntries([]);
       }
-    })();
-  }, []);
-
-// goal + entries 
-  useEffect(() => { AsyncStorage.setItem(goalKey, String(goal)).catch(()=>{}); }, [goal]);
-  useEffect(() => { AsyncStorage.setItem(entriesKey(), JSON.stringify(entries)).catch(()=>{}); }, [entries]);
-
-// Auto reset at midnight
-  useEffect(() => {
-    const maybeFlipDay = async () => {
-      const nowStr = new Date().toDateString();
-      if (nowStr !== lastDateRef.current) {
-        lastDateRef.current = nowStr;
-        setEntries([]);
-        try { await AsyncStorage.removeItem(entriesKey()); } catch {}
-        }
     };
-    const id = setInterval(maybeFlipDay, 30*1000);
-    const sub = AppState.addEventListener('change', (s)=>{ if (s==='active') maybeFlipDay(); });
-    return ()=>{ clearInterval(id); sub.remove(); };
+    loadData();
   }, []);
 
-  // Actions
-  const addQuick = (n) => {
+  useFocusEffect(
+    useCallback(() => {
+      fetchTodayEntries(); // refetch entries when screen is focused
+    }, [])
+  );
+
+  const fetchTodayEntries = async () => {
+    try {
+      const res = await apiGet('/plans/today/entries');
+
+      if (res && Array.isArray(res.entries)) {
+        setEntries(res.entries); // ✅ FIX: access .entries
+      } else {
+        console.warn('Unexpected response structure:', res);
+        setEntries([]);
+      }
+    } catch (e) {
+      console.warn('Failed to load today entries', e);
+      setEntries([]);
+    }
+  };
+
+  const addQuick = async (n) => {
     const v = Math.round(Number(n));
     if (Number.isNaN(v) || v <= 0) return;
+
     if (minutesSinceMidnight() > DAY_END_MINUTES) {
-      if (Platform.OS === 'web') { if (!window.confirm('Tracking stops after 23:49. Add to tomorrow?')) return; }
-      else Alert.alert('Day closed', 'Calorie tracking for today stops after 23:49. Try again after midnight.');
+      Alert.alert('Day closed', 'Calorie tracking for today stops after 23:59. Try again after midnight.');
       return;
     }
-    setEntries((prev)=>[{ id: Date.now().toString(), name: 'Quick add', calories: v, mealType: 'snack', time: new Date().toISOString() }, ...prev]);
-    if (Platform.OS !== 'web') Keyboard.dismiss();
+
+    try {
+      await apiPost('/plans/today/add-custom', {
+        name: 'Quick add',
+        calories: v,
+        mealType: 'snack',
+      });
+
+      await fetchTodayEntries(); // ✅ Refresh entries
+    } catch (err) {
+      console.warn('Quick add failed', err);
+      Alert.alert('Error', 'Quick add failed.');
+    }
   };
 
-  const addEntry = () => {
+
+  const addEntry = async () => {
     const v = Math.round(Number(cals));
     if (!name.trim() || Number.isNaN(v) || v <= 0) {
-      if (Platform.OS === 'web') window.alert('Enter a food name and positive calories.');
-      else Alert.alert('Missing info', 'Please enter a food name and positive calories.');
+      Alert.alert('Missing info', 'Please enter a food name and positive calories.');
       return;
     }
+
     if (minutesSinceMidnight() > DAY_END_MINUTES) {
-      if (Platform.OS === 'web') { if (!window.confirm('Tracking stops after 23:49. Add to tomorrow?')) return; }
-      else { Alert.alert('Day closed', 'Calorie tracking for today stops after 23:49. Try again after midnight.'); return; }
+      Alert.alert('Day closed', 'Calorie tracking for today stops after 23:59. Try again after midnight.');
+      return;
     }
-    const entry = { id: Date.now().toString(), name: name.trim(), calories: v, mealType, time: new Date().toISOString() };
-    setEntries((prev)=>[entry, ...prev]);
-    setName(''); setCals('');
-    if (Platform.OS !== 'web') Keyboard.dismiss();
+
+    try {
+      await apiPost('/plans/today/add-custom', {
+        name: name.trim(),
+        calories: v,
+        mealType,
+      });
+
+      setName('');
+      setCals('');
+      await fetchTodayEntries(); // ✅ Refresh entries
+    } catch (err) {
+      console.warn('Add entry error:', err);
+      Alert.alert('Error', 'Failed to add entry.');
+    }
   };
 
-  const deleteEntry = (id) => {
-    if (Platform.OS === 'web') {
-      if (!window.confirm('Delete this entry?')) return;
-      setEntries((prev)=> prev.filter(e=>e.id!==id));
-      return;
+  const deleteEntry = async (entryId) => {
+    try {
+      const ok = Platform.OS === 'web'
+        ? window.confirm('Delete this entry?')
+        : await new Promise((resolve) =>
+            Alert.alert('Delete entry?', 'This will remove the food from today.', [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+            ])
+          );
+
+      if (!ok) return;
+
+      await apiDel(`/plans/today/entry/${entryId}`);
+      await fetchTodayEntries(); // refresh list
+    } catch (err) {
+      console.warn('Delete entry error', err);
+      Alert.alert('Error', 'Failed to delete entry.');
     }
-    Alert.alert('Delete entry?', 'This will remove the food from today.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => setEntries((prev)=> prev.filter(e=>e.id!==id)) },
-    ]);
   };
 
   const resetToday = async () => {
     if (Platform.OS === 'web') {
       const ok = typeof window !== 'undefined' && window.confirm("Reset today's entries?");
       if (!ok) return;
-      setEntries([]);
-      try { await AsyncStorage.removeItem(entriesKey()); } catch {}
+      try {
+        await apiDel('/plans/today/reset');
+        setEntries([]);
+        Alert.alert('Reset', 'Today’s entries have been cleared.');
+      } catch (err) {
+        console.warn('Reset error', err);
+        Alert.alert('Error', 'Failed to reset today’s entries.');
+      }
       return;
     }
+
     Alert.alert('Reset today?', "This clears all of today's food entries.", [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', style: 'destructive', onPress: async () => { setEntries([]); try { await AsyncStorage.removeItem(entriesKey()); } catch {} } },
+      { text: 'Reset', style: 'destructive', onPress: async () => {
+          try {
+            await apiDel('/plans/today/reset');
+            setEntries([]);
+            Alert.alert('Reset', 'Today’s entries have been cleared.');
+          } catch (err) {
+            console.warn('Reset error', err);
+            Alert.alert('Error', 'Failed to reset today’s entries.');
+          }
+        }
+      },
     ]);
   };
+
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
       <FlatList
         data={entries}                 
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         horizontal={false}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1, width: '100%' }} 
@@ -228,13 +258,6 @@ export default function CaloriePage() {
                 />
                 <Pressable style={styles.btn} onPress={() => addQuick(delta)}>
                   <Text style={styles.btnText}>+ Add</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.btn, styles.btnSub]}
-                  onPress={() => addQuick(-Math.abs(Number(delta || 0)))}
-                  disabled
-                >
-                  <Text style={styles.btnText}>− Sub</Text>
                 </Pressable>
               </View>
             </View>
@@ -287,7 +310,7 @@ export default function CaloriePage() {
                 </Text>
               </View>
               <Text style={styles.entryCals}>{item.calories}</Text>
-              <Pressable style={styles.entryDel} onPress={() => deleteEntry(item.id)}>
+              <Pressable style={styles.entryDel} onPress={() => deleteEntry(item._id)}>
                 <Text style={styles.entryDelText}>Delete</Text>
               </Pressable>
             </View>
