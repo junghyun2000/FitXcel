@@ -48,4 +48,114 @@ router.get('/today/total', auth, async (req, res) => {
   res.json({ date: today, total });
 });
 
+router.get('/today/entries', auth, async (req, res) => {
+  const db = await connectDB();
+  const entries = db.collection('entries');
+  const today = new Date().toISOString().slice(0, 10);
+
+  const data = await entries.aggregate([
+    { $match: { userId: req.user.id, date: today } },
+    {
+      $lookup: {
+        from: 'meals',
+        localField: 'mealId',
+        foreignField: '_id',
+        as: 'mealInfo',
+      }
+    },
+    {
+      $addFields: {
+        meal: { $arrayElemAt: ['$mealInfo', 0] }
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        calories: '$caloriesAtAdd',
+        mealType: {
+          $ifNull: ['$meal.mealType', '$mealType']
+        },
+        name: {
+          $ifNull: ['$meal.name', '$name']
+        },
+        time: '$createdAt'
+      }
+    }
+  ]).toArray();
+
+  res.json({ entries: data });
+});
+
+router.post('/today/manual', auth, async (req, res) => {
+  const { name, calories, mealType = 'snack' } = req.body || {};
+
+  if (!name || !calories || calories <= 0) {
+    return res.status(400).json({ error: 'Name and positive calories required' });
+  }
+
+  const db = await connectDB();
+  const entries = db.collection('entries');
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const result = await entries.insertOne({
+    userId: req.user.id,
+    date: today,
+    mealId: null, // not tied to a saved meal
+    name: name.trim(),
+    caloriesAtAdd: Math.round(calories),
+    mealType,
+    createdAt: new Date(),
+  });
+
+  res.json({ ok: true, id: result.insertedId.toString() });
+});
+
+router.delete('/today/reset', auth, async (req, res) => {
+  const db = await connectDB();
+  const entries = db.collection('entries');
+  const today = new Date().toISOString().slice(0, 10);
+
+  const result = await entries.deleteMany({
+    userId: req.user.id,
+    date: today,
+  });
+
+  res.json({ ok: true, deleted: result.deletedCount });
+});
+
+router.post('/today/add-custom', auth, async (req, res) => {
+  const { name, calories, mealType = 'snack', servings = 1 } = req.body || {};
+  const kcal = Math.round(Number(calories || 0));
+  if (!name || !kcal || kcal <= 0) {
+    return res.status(400).json({ error: 'name and positive calories required' });
+  }
+
+  const db = await connectDB();
+  const entries = db.collection('entries');
+
+  const entry = {
+    userId: req.user.id,
+    date: new Date().toISOString().slice(0, 10),
+    name: String(name).trim(),
+    caloriesAtAdd: kcal,
+    mealType,
+    servings: Number(servings),
+    createdAt: new Date(),
+    };
+
+  const result = await entries.insertOne(entry);
+  res.json({ ok: true, entryId: result.insertedId });
+});
+
+router.delete('/today/entry/:id', auth, async (req, res) => {
+  const db = await connectDB();
+  const entries = db.collection('entries');
+  const result = await entries.deleteOne({
+    _id: new ObjectId(req.params.id),
+    userId: req.user.id,
+  });
+  res.json({ ok: true, deleted: result.deletedCount });
+});
+
 module.exports = router;

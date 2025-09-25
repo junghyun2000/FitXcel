@@ -19,10 +19,13 @@ router.get('/', auth, async (req, res) => {
 // Create a saved meal
 router.post('/', auth, async (req, res) => {
   const { name, calories, mealType } = req.body || {};
-  const kcal = Math.round(Number(calories || 0));
-  if (!name || !kcal || kcal <= 0) {
+  const kcal = Math.round(Number(calories));
+
+  if (!name || Number.isNaN(kcal) || kcal <= 0) {
+    console.log('[MEALS POST] Invalid input:', { name, calories, kcal });
     return res.status(400).json({ error: 'name and positive calories required' });
   }
+
   const db = await connectDB();
   const meals = db.collection('meals');
   const result = await meals.insertOne({
@@ -32,6 +35,7 @@ router.post('/', auth, async (req, res) => {
     mealType: mealType || 'snack',
     createdAt: new Date(),
   });
+
   res.json({ id: result.insertedId });
 });
 

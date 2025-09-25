@@ -35,7 +35,7 @@ export default function SavedMeals() {
             Alert.alert('Oops', 'Enter name and positive calories');
             return;
             }
-            await apiPost('/meals', { name: name.trim(), calories: c, mealType });
+            const res = await apiPost('/meals', { name: name.trim(), calories: c, mealType });
             setName(''); setCalories('');
             await loadMeals();
             Alert.alert('Saved', 'Meal saved successfully');

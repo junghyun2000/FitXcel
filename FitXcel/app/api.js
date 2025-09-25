@@ -10,10 +10,18 @@ async function authHeaders() {
   return h;
 }
 
+function extractErrorMessage(data) {
+  if (!data) return 'Request failed';
+  if (typeof data === 'string') return data;
+  if (data.error) return data.error;
+  return JSON.stringify(data);
+}
+
 export async function apiGet(path) {
   const res = await fetch(`${BASE_URL}${path}`, { headers: await authHeaders() });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(extractErrorMessage(data));
+  return data;
 }
 
 export async function apiPost(path, body) {
@@ -22,8 +30,9 @@ export async function apiPost(path, body) {
     headers: await authHeaders(),
     body: JSON.stringify(body || {}),
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(extractErrorMessage(data));
+  return data;
 }
 
 export async function apiDel(path) {
@@ -31,6 +40,7 @@ export async function apiDel(path) {
     method: 'DELETE',
     headers: await authHeaders(),
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(extractErrorMessage(data));
+  return data;
 }
