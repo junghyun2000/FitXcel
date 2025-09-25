@@ -10,7 +10,9 @@ app.use(express.json());
 const authRoutes = require('./routes/auth'); // Make sure this file exists!
 const mealsRoutes = require('./routes/meals');  // for meals
 const plansRoutes = require('./routes/plans'); // for meal plans
+const workoutRoutes = require('./routes/workout');
 app.use('/auth', authRoutes);
+app.use('/workout', workoutRoutes);
 app.use('/meals', mealsRoutes);
 app.use('/plans', plansRoutes);
 
