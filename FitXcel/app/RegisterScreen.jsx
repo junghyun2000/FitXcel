@@ -3,26 +3,32 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "reac
 import { useRouter } from "expo-router";
 
 export default function RegisterScreen() {
+  // State for email and password input fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
 
+  // Helper function to validate email format
   function isValidEmail(email) {
     return /\S+@\S+\.\S+/.test(email);
   }
 
+  // Handle register button press
   async function handleRegister() {
     console.log("Register pressed");
+    // Validate email format
     if (!isValidEmail(email.trim())) {
-    console.log("Invalid email detected");
-    Alert.alert("Invalid Email", "Please enter a valid email address.");
-    return;
+      console.log("Invalid email detected");
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
     }
+    // Validate password length
     if (password.length < 6) {
       Alert.alert("Weak Password", "Password must be at least 6 characters long.");
       return;
     }
     try {
+      // Send registration request to backend
       const res = await fetch("http://localhost:4000/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -30,20 +36,25 @@ export default function RegisterScreen() {
       });
       const data = await res.json();
       if (res.ok) {
+        // Show success and redirect to login
         Alert.alert("Success", "Account created! Please log in.");
         router.replace("/LoginScreen");
       } else {
+        // Show error if registration fails
         Alert.alert("Registration Failed", data.error || "Unknown error");
       }
     } catch (e) {
+      // Show error if server is unreachable
       Alert.alert("Error", "Could not connect to server.");
     }
   }
 
   return (
     <View style={styles.container}>
+      {/* Title and subtitle */}
       <Text style={styles.title}>Create Account</Text>
       <Text style={styles.subtitle}>Register to get started</Text>
+      {/* Email input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Email</Text>
         <TextInput
@@ -56,6 +67,7 @@ export default function RegisterScreen() {
           placeholderTextColor="#888"
         />
       </View>
+      {/* Password input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Password</Text>
         <TextInput
@@ -67,9 +79,11 @@ export default function RegisterScreen() {
           placeholderTextColor="#888"
         />
       </View>
+      {/* Register button */}
       <TouchableOpacity style={styles.button} onPress={handleRegister}>
         <Text style={styles.buttonText}>Register</Text>
       </TouchableOpacity>
+      {/* Link to login screen */}
       <TouchableOpacity onPress={() => router.replace("/LoginScreen")}>
         <Text style={styles.link}>Already have an account? Login</Text>
       </TouchableOpacity>
@@ -77,6 +91,7 @@ export default function RegisterScreen() {
   );
 }
 
+// Styles for the register screen
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#111" },
   title: { fontSize: 32, fontWeight: "700", marginBottom: 8, color: "#fff", textAlign: "center" },
