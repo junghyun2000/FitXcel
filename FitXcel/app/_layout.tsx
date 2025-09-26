@@ -7,7 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 const AUTH_ROUTES = new Set(['/LoginScreen', '/RegisterScreen']);
-const APP_HOME = '/(tabs)/calories';
+const APP_HOME = '/(tabs)';
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);

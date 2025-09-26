@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, Pressable, Alert, Keyboard, Platform
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { router } from 'expo-router';
-import { apiGet, apiPost, apiDel } from '../api';
+import { apiGet, apiPost, apiDel } from '../../utils/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 
