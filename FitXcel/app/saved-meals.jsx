@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, FlatList, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiGet, apiPost, apiDel } from './api';
+import { apiGet, apiPost, apiDel } from '../utils/api';
 import { Stack } from 'expo-router';
 
 export default function SavedMeals() {

@@ -6,8 +6,7 @@ import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-const AUTH_ROUTES = new Set(['/LoginScreen', '/RegisterScreen']);
-const APP_HOME = '/(tabs)/calories';
+const AUTH_ROUTES = new Set(['LoginScreen', 'RegisterScreen']);
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
@@ -15,7 +14,6 @@ export default function RootLayout() {
   const pathname = usePathname();
   const colorScheme = useColorScheme();
 
-  // 1) Initial auth check on mount
   useEffect(() => {
     (async () => {
       const token = await AsyncStorage.getItem('token');
@@ -24,7 +22,6 @@ export default function RootLayout() {
     })();
   }, []);
 
-  // 2) Re-check when path changes (after login/register)
   useEffect(() => {
     (async () => {
       const token = await AsyncStorage.getItem('token');
@@ -34,43 +31,35 @@ export default function RootLayout() {
 
   if (!ready) return null;
 
-  // 3) HARD REDIRECT GUARD (prevents wrong screen showing)
-  // If NOT authed and you're not already on an auth route, force to Login
-  if (!isAuthed && !AUTH_ROUTES.has(pathname)) {
+  const currentRoute = (pathname ?? '').replace(/^\//, '');
+
+  // Hard guard: decide BEFORE rendering <Stack>
+  if (!isAuthed && !AUTH_ROUTES.has(currentRoute)) {
     return <Redirect href="/LoginScreen" />;
   }
-  // If authed but you're on an auth route, force to tabs
-  if (isAuthed && AUTH_ROUTES.has(pathname)) {
-    return <Redirect href={APP_HOME} />;
+  if (isAuthed && AUTH_ROUTES.has(currentRoute)) {
+    return <Redirect href="/(tabs)" />;
   }
 
-  // 4) Render the appropriate stack, wrapped in ThemeProvider
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        {isAuthed ? (
-          <>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen
-              name="saved-meals"
-              options={{
-                headerShown: true, 
-                title: 'Saved Meals',       // Page title in the header
-                headerBackTitle: 'Calorie page', // Back button label
-                headerTintColor: '#fff',
-                headerStyle: { backgroundColor: '#0B1220' },
-              }}
-            />
-            <Stack.Screen name="+not-found" />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="LoginScreen" />
-            <Stack.Screen name="RegisterScreen" />
-          </>
-        )}
-      </Stack>
       <StatusBar style="auto" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="saved-meals"
+          options={{
+            headerShown: true,
+            title: 'Saved Meals',
+            headerBackTitle: 'Calorie page',
+            headerTintColor: '#fff',
+            headerStyle: { backgroundColor: '#0B1220' },
+          }}
+        />
+        <Stack.Screen name="+not-found" />
+        <Stack.Screen name="LoginScreen" />
+        <Stack.Screen name="RegisterScreen" />
+      </Stack>
     </ThemeProvider>
   );
 }
