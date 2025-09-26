@@ -4,6 +4,7 @@ import DropDownPicker from "react-native-dropdown-picker";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { apiGet, apiPost, BASE_URL } from '../../utils/api';
 
 // Example exercise list for dropdown
 const exampleExercises = ["Bench Press", "Squats", "Deadlift"];
@@ -30,8 +31,8 @@ export default function WorkoutLog() {
         const token = await AsyncStorage.getItem("token"); // get auth token
         if (!token) return; // skip if not logged in
 
-        // fetch workouts from API
-        const res = await fetch("http://localhost:4000/workout", {
+        // fetch workouts from API using BASE_URL
+        const res = await fetch(`${BASE_URL}/workout`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -137,8 +138,8 @@ export default function WorkoutLog() {
         return;
       }
 
-      // POST workout to server
-      const response = await fetch("http://localhost:4000/workout", {
+      // POST workout to server using BASE_URL
+      const response = await fetch(`${BASE_URL}/workout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -349,11 +350,6 @@ const styles = StyleSheet.create({
   {
     color: "#9ca3af",
     marginBottom: 8
-  },
-  inputsRow:
-  {
-    flexDirection: "row",
-    gap: 8
   },
   input:
   {
