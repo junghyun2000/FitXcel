@@ -5,17 +5,22 @@ import { useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
 
 export default function LoginScreen() {
+  // State for email and password input fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
 
+  // Load custom font
   const [fontsLoaded] = useFonts({
     MontserratBold: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  // Prevent rendering until font is loaded
   if (!fontsLoaded) return null;
 
+  // Handle login button press
   async function handleLogin() {
     try {
+      // Send login request to backend
       const res = await fetch("http://localhost:4000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -23,20 +28,25 @@ export default function LoginScreen() {
       });
       const data = await res.json();
       if (res.ok) {
+        // Save token and redirect to home/tabs
         await AsyncStorage.setItem("token", data.token);
-        router.replace("/"); // Redirect to tabs/home
+        router.replace("/"); // Redirect to main app screen
       } else {
+        // Show error if login fails
         Alert.alert("Login Failed", data.error || "Unknown error");
       }
     } catch (e) {
+      // Show error if server is unreachable
       Alert.alert("Error", "Could not connect to server.");
     }
   }
 
   return (
     <View style={styles.container}>
+      {/* App title with custom font */}
       <Text style={[styles.title, { fontFamily: 'MontserratBold' }]}>FitXcel</Text>
       <Text style={styles.subtitle}>Sign in to continue</Text>
+      {/* Email input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Email</Text>
         <TextInput
@@ -49,6 +59,7 @@ export default function LoginScreen() {
           placeholderTextColor="#888"
         />
       </View>
+      {/* Password input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Password</Text>
         <TextInput
@@ -60,9 +71,11 @@ export default function LoginScreen() {
           placeholderTextColor="#888"
         />
       </View>
+      {/* Login button */}
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
+      {/* Link to registration screen */}
       <TouchableOpacity onPress={() => router.replace("/RegisterScreen")}>
         <Text style={styles.link}>Do not have an account? Register</Text>
       </TouchableOpacity>
@@ -70,6 +83,7 @@ export default function LoginScreen() {
   );
 }
 
+// Styles for the login screen
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#111" },
   title: { fontSize: 32, fontWeight: "700", marginBottom: 8, color: "#fff", textAlign: "center" },
