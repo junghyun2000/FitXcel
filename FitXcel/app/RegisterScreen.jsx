@@ -7,7 +7,21 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
+  function isValidEmail(email) {
+    return /\S+@\S+\.\S+/.test(email);
+  }
+
   async function handleRegister() {
+    console.log("Register pressed");
+    if (!isValidEmail(email.trim())) {
+    console.log("Invalid email detected");
+    Alert.alert("Invalid Email", "Please enter a valid email address.");
+    return;
+    }
+    if (password.length < 6) {
+      Alert.alert("Weak Password", "Password must be at least 6 characters long.");
+      return;
+    }
     try {
       const res = await fetch("http://localhost:4000/auth/register", {
         method: "POST",
