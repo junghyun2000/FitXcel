@@ -1,5 +1,5 @@
 // app/_layout.tsx
-import { Stack, Redirect, usePathname } from 'expo-router';
+import { Stack, Redirect, usePathname, Href} from 'expo-router';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
@@ -32,16 +32,17 @@ export default function RootLayout() {
   }, [pathname]);
 
   if (!ready) return null;
+ 
 
   // 3) HARD REDIRECT GUARD (prevents wrong screen showing)
   // If NOT authed and you're not already on an auth route, force to Login
-  if (!isAuthed && !AUTH_ROUTES.has(pathname)) {
-    return <Redirect href="/LoginScreen" />;
-  }
-  // If authed but you're on an auth route, force to tabs
-  if (isAuthed && AUTH_ROUTES.has(pathname)) {
-    return <Redirect href="/(tabs)" />;
-  }
+if (!isAuthed && !AUTH_ROUTES.has(pathname)) {
+  return <Redirect href= {"/LoginScreen" as Href}/>;
+
+}
+if (isAuthed && AUTH_ROUTES.has(pathname)) {
+  return <Redirect href= {"/(tabs)" as Href}/>;
+}
 
   // 4) Render the appropriate stack, wrapped in ThemeProvider
   return (
