@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, FlatList, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiGet, apiPost, apiDel } from './api';
-
+import { Stack } from 'expo-router';
 
 export default function SavedMeals() {
     const [name, setName] = useState('');
@@ -10,28 +10,18 @@ export default function SavedMeals() {
     const [mealType, setMealType] = useState('breakfast');
     const [meals, setMeals] = useState([]);
     const [loading, setLoading] = useState(false);
-    
-    //testing without backend server
-    const DEMO_MODE = true;
 
     const loadMeals = async () => {
 
-        // testing without backend server
-        if (DEMO_MODE) {
-            setMeals([
-                { id: 'd1', name: 'Oats + Banana', calories: 350, mealType: 'breakfast' },
-                { id: 'd2', name: 'Chicken Salad', calories: 480, mealType: 'lunch' },
-            ]);
-            return;
-        }
-
-        setLoading(true);
         try {
-            const data = await apiGet('/meals'); // GET list of saved meals
-            setMeals(Array.isArray(data) ? data : []);
+            setLoading(true);
+            const data = await apiGet('/meals');
+            setMeals(data); // items are { id, name, calories, mealType, ... }
         } catch (e) {
-            console.warn('loadMeals', e.message);
-        } finally { setLoading(false); }
+            console.warn(e);
+        } finally {
+            setLoading(false);
+        }
     };
 
 
@@ -39,76 +29,74 @@ export default function SavedMeals() {
 
 
     const saveMeal = async () => {
-        const c = Math.round(Number(calories));
-        if (!name.trim() || !c || c <= 0) {
-            Platform.OS === 'web' ? alert('Enter name and positive calories') : Alert.alert('Missing', 'Enter name and positive calories');
-            return;
-        }
-
-        // testing without backend server
-        if (DEMO_MODE) {
-            setMeals(prev => [{ id: String(Date.now()), name: name.trim(), calories: c, mealType }, ...prev]);
-            setName(''); setCalories('');
-            return;
-        }
-
-
         try {
-            await apiPost('/meals', { name: name.trim(), calories: c, mealType });
+            const c = Math.round(Number(calories));
+            if (!name.trim() || !c || c <= 0) {
+            Alert.alert('Oops', 'Enter name and positive calories');
+            return;
+            }
+            const res = await apiPost('/meals', { name: name.trim(), calories: c, mealType });
             setName(''); setCalories('');
-            loadMeals();
-        } catch (e) { console.warn('saveMeal', e.message); }
+            await loadMeals();
+            Alert.alert('Saved', 'Meal saved successfully');
+        } catch (e) {
+            Alert.alert('Save failed', e?.message ?? String(e));
+            console.warn('saveMeal error:', e);
+        }
     };
 
 
     const addToToday = async (meal) => {
 
-        // testing without backend server
-        if (DEMO_MODE) {
-            Platform.OS === 'web' ? alert(`(demo) Added ${meal.name} to today`) : Alert.alert('Added (demo)', meal.name);
-            return;
-        }
-
         try {
-            await apiPost('/plans/today/add', { mealId: meal.id, servings: 1 });
-            Platform.OS === 'web' ? alert('Added to today') : Alert.alert('Added', 'Meal added to today');
-        } catch (e) { console.warn('addToToday', e.message); }
+            const res = await apiPost('/plans/today/add', { mealId: meal.id, servings: 1 });
+            // backend returns { ok: true, calories }
+            Alert.alert('Added', `+${res?.calories ?? 0} kcal added to today`);
+        } catch (e) {
+            Alert.alert('Add failed', e?.message ?? String(e));
+            console.warn('addToToday error:', e);
+        }
     };
 
 
     const deleteMeal = async (meal) => {
 
-        // testing without backend server
-        if (DEMO_MODE) {
-            setMeals(prev => prev.filter(m => m.id !== meal.id));
-            return;
-        }
-
         try {
             await apiDel(`/meals/${meal.id}`);
-            loadMeals();
-        } catch (e) { console.warn('deleteMeal', e.message); }
+            await loadMeals();
+            Alert.alert('Deleted', 'Meal removed');
+        } catch (e) {
+            Alert.alert('Delete failed', e?.message ?? String(e));
+            console.warn('deleteMeal error:', e);
+        }
     };
 
 
     const renderItem = ({ item }) => (
-    <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.meta}>{item.mealType} • {item.calories} kcal/serving</Text>
+        <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.meta}>{item.mealType} • {item.calories} kcal/serving</Text>
+            </View>
+            <Pressable style={styles.btn} onPress={() => addToToday(item)}>
+                <Text style={styles.btnText}>Add to today</Text>
+            </Pressable>
+            <Pressable style={styles.btnGhost} onPress={() => deleteMeal(item)}>
+                <Text style={styles.btnGhostText}>Delete</Text>
+            </Pressable>
         </View>
-        <Pressable style={styles.btn} onPress={() => addToToday(item)}>
-            <Text style={styles.btnText}>Add to today</Text>
-        </Pressable>
-        <Pressable style={styles.btnGhost} onPress={() => deleteMeal(item)}>
-            <Text style={styles.btnGhostText}>Delete</Text>
-        </Pressable>
-    </View>
-);
+    );
 
 
     return (
         <SafeAreaView style={styles.container}>
+            <Stack.Screen
+                options={{
+                headerShown: true,         
+                title: 'Saved Meals',      
+                headerBackTitle: 'Calorie' 
+                }}
+            />
             <Text style={styles.title}>Saved Meals</Text>
 
 
