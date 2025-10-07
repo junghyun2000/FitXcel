@@ -4,6 +4,8 @@ const connectDB = require('../db');
 const auth = require('../middleware/auth');
 const { ObjectId } = require('mongodb');
 
+console.log("✅ plans.js routes loaded");
+
 // Add a saved meal to today’s entries
 router.post('/today/add', auth, async (req, res) => {
   const { mealId, servings = 1 } = req.body || {};
@@ -156,6 +158,37 @@ router.delete('/today/entry/:id', auth, async (req, res) => {
     userId: req.user.id,
   });
   res.json({ ok: true, deleted: result.deletedCount });
+});
+
+router.get('/history', auth, async (req, res) => {
+  try {
+    const entries = req.db.collection('entries');
+    const userId = req.user.id;
+
+    console.log("📦 /plans/history for user:", userId);
+
+    // show one example from DB for debugging
+    const sample = await entries.findOne({});
+    console.log("🧾 sample entry in DB:", sample);
+
+    const today = new Date();
+    const twoWeeksAgo = new Date(today);
+    twoWeeksAgo.setDate(today.getDate() - 14);
+    const cutoff = twoWeeksAgo.toISOString().slice(0, 10);
+    console.log("📅 cutoff:", cutoff);
+
+    const data = await entries
+      .find({ userId, date: { $gte: cutoff } })
+      .sort({ date: -1 })
+      .toArray();
+
+    console.log("✅ returned entries:", data.length);
+
+    res.json({ history: data });
+  } catch (err) {
+    console.error("Error fetching history:", err);
+    res.status(500).json({ error: "Failed to fetch calorie history" });
+  }
 });
 
 module.exports = router;
