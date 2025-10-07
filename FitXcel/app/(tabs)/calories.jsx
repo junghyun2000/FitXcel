@@ -96,7 +96,7 @@ export default function CaloriePage() {
       const res = await apiGet('/plans/today/entries');
 
       if (res && Array.isArray(res.entries)) {
-        setEntries(res.entries); // ✅ FIX: access .entries
+        setEntries(res.entries); // access .entries
       } else {
         console.warn('Unexpected response structure:', res);
         setEntries([]);
@@ -123,7 +123,7 @@ export default function CaloriePage() {
         mealType: 'snack',
       });
 
-      await fetchTodayEntries(); // ✅ Refresh entries
+      await fetchTodayEntries(); // Refresh entries
     } catch (err) {
       console.warn('Quick add failed', err);
       Alert.alert('Error', 'Quick add failed.');
@@ -152,7 +152,7 @@ export default function CaloriePage() {
 
       setName('');
       setCals('');
-      await fetchTodayEntries(); // ✅ Refresh entries
+      await fetchTodayEntries(); // Refresh entries
     } catch (err) {
       console.warn('Add entry error:', err);
       Alert.alert('Error', 'Failed to add entry.');
