@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { apiGet } from "../utils/api"; // ✅ use the same API helper
+import AsyncStorage from "@react-native-async-storage/async-storage";  // ✅ added
+
+import { apiGet } from "../utils/api";
 
 export default function CalorieHistory() {
   const router = useRouter();
@@ -12,17 +14,25 @@ export default function CalorieHistory() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await apiGet("/plans/history");
+        // ✅ explicitly re-fetch the token here before calling apiGet
+        const token = await AsyncStorage.getItem("token");
+        console.log("🔑 Token inside history page:", token ? token.slice(0, 10) + "..." : "none");
 
+        if (!token) {
+          Alert.alert("Error", "Missing authentication token. Please log in again.");
+          return;
+        }
+
+        // ✅ now safely call apiGet (your working helper will use it)
+        const res = await apiGet("/plans/history");
         if (res && Array.isArray(res.history)) {
           setDays(res.history);
         } else {
-          console.warn("Unexpected response:", res);
           Alert.alert("Error", res?.error || "Failed to load calorie history");
         }
       } catch (err) {
         console.warn("Calorie history load error:", err);
-        Alert.alert("Error", "Could not fetch calorie history.");
+        Alert.alert("Error", "Failed to fetch calorie history");
       } finally {
         setLoading(false);
       }
