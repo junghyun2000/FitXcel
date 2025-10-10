@@ -64,7 +64,7 @@ export default function Profile() {
       setStats(res.stats ?? { strength: 10, stamina: 10, agility: 10 });
       setTasks(Array.isArray(res.tasks) && res.tasks.length ? res.tasks : dummyTasks);
     } catch (err) {
-      appendLog('GET /profile failed: ${String(err)}`);
+      appendLog(`GET /profile failed: ${String(err)}`);
       Alert.alert("Error", "Could not load profile data");
       setTasks(dummyTasks); // fallback so the page isn’t empty
     }
@@ -74,7 +74,7 @@ export default function Profile() {
     fetchProfile();
   }, []);
 
-  // Complete task → add XP
+  // Complete task -> add XP
   const handleCompleteTask = async (taskId, xp) => {
     try {
       appendLog(`handleCompleteTask(${taskId}, ${xp})`);
@@ -136,8 +136,6 @@ export default function Profile() {
         <TouchableOpacity style={styles.bigButton} onPress={() => router.push("/StatsScreen")}>
           <ThemedText style={styles.bigButtonText}>Go to Stats Screen</ThemedText>
         </TouchableOpacity>
-
-        
       </ScrollView>
     </ThemedView>
   );
