@@ -51,12 +51,12 @@ export default function Profile() {
   // Fetch profile via apiGet
   const fetchProfile = async () => {
     try {
-      appendLog(`🔹 fetchProfile() → BASE_URL=${BASE_URL}`);
+      appendLog(`fetchProfile() → BASE_URL=${BASE_URL}`);
       const token = await AsyncStorage.getItem("token");
-      appendLog(`🔹 token present? ${!!token}`);
+      appendLog(`token present? ${!!token}`);
 
       const res = await apiGet("/profile");
-      appendLog(`✅ GET /profile ok: ${JSON.stringify(res).slice(0, 200)}...`);
+      appendLog(`GET /profile ok: ${JSON.stringify(res).slice(0, 200)}...`);
 
       setExperience(res.experience ?? 0);
       setLevel(res.level ?? 1);
@@ -64,7 +64,7 @@ export default function Profile() {
       setStats(res.stats ?? { strength: 10, stamina: 10, agility: 10 });
       setTasks(Array.isArray(res.tasks) && res.tasks.length ? res.tasks : dummyTasks);
     } catch (err) {
-      appendLog(`❌ GET /profile failed: ${String(err)}`);
+      appendLog('GET /profile failed: ${String(err)}`);
       Alert.alert("Error", "Could not load profile data");
       setTasks(dummyTasks); // fallback so the page isn’t empty
     }
@@ -77,9 +77,9 @@ export default function Profile() {
   // Complete task → add XP
   const handleCompleteTask = async (taskId, xp) => {
     try {
-      appendLog(`🔸 handleCompleteTask(${taskId}, ${xp})`);
+      appendLog(`handleCompleteTask(${taskId}, ${xp})`);
       const updated = await apiPost("/profile", { xp, taskId });
-      appendLog(`✅ POST /profile ok: ${JSON.stringify(updated).slice(0, 200)}...`);
+      appendLog(`POST /profile ok: ${JSON.stringify(updated).slice(0, 200)}...`);
 
       setExperience(updated.experience ?? 0);
       setLevel(updated.level ?? 1);
@@ -87,7 +87,7 @@ export default function Profile() {
       setStats(updated.stats ?? { strength: 10, stamina: 10, agility: 10 });
       setTasks(Array.isArray(updated.tasks) && updated.tasks.length ? updated.tasks : dummyTasks);
     } catch (err) {
-      appendLog(`❌ POST /profile failed: ${String(err)}`);
+      appendLog(`POST /profile failed: ${String(err)}`);
       Alert.alert("Error", "Could not complete task");
     }
   };
@@ -125,7 +125,7 @@ export default function Profile() {
                 disabled={task.done}
               >
                 <ThemedText style={styles.bigButtonText}>
-                  {task.done ? "✅ Completed" : `Complete (+${task.xp} XP)`}
+                  {task.done ? "Completed" : `Complete (+${task.xp} XP)`}
                 </ThemedText>
               </TouchableOpacity>
             </View>
