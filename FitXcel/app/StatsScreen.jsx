@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, ScrollView, TouchableOpacity } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { StyleSheet, View, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
+import { apiGet, apiPost } from "../utils/api";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 
@@ -15,36 +15,54 @@ function ProgressBar({ progress, color }) {
 
 export default function StatsScreen() {
   const router = useRouter();
-  
+
   const [stats, setStats] = useState({ strength: 10, stamina: 10, agility: 10 });
   const [levelPoints, setLevelPoints] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  // Load profile data from backend
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const res = await apiGet("/profile");
+      if (res) {
+        setStats(res.stats || { strength: 10, stamina: 10, agility: 10 });
+        setLevelPoints(res.levelPoints || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+      Alert.alert("Error", "Could not load stats");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const stored = await AsyncStorage.getItem("profileData");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          setStats(parsed.stats || { strength: 10, stamina: 10, agility: 10 });
-          setLevelPoints(parsed.levelPoints || 0);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
     fetchProfile();
   }, []);
 
-  const handleUpgrade = (stat) => {
-    const updatedStats = { ...stats, [stat]: stats[stat] + 1 };
-    setStats(updatedStats);
-    setLevelPoints(levelPoints - 1);
+  // Handle upgrading a specific stat
+  const handleUpgrade = async (stat) => {
+    if (levelPoints <= 0) return;
 
-    AsyncStorage.mergeItem(
-      "profileData",
-      JSON.stringify({ stats: updatedStats, levelPoints: levelPoints -       1 })
-    ).catch((err) => console.error("Failed to save stats:", err));
+    try {
+      const updated = await apiPost("/profile", { upgrade: stat });
+      setStats(updated.stats || stats);
+      setLevelPoints(updated.levelPoints || 0);
+    } catch (err) {
+      console.error("Upgrade failed:", err);
+      Alert.alert("Error", "Failed to upgrade stat");
+    }
   };
+
+  if (loading) {
+    return (
+      <ThemedView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#4FC3F7" />
+        <ThemedText style={{ marginTop: 10 }}>Loading stats...</ThemedText>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -58,25 +76,17 @@ export default function StatsScreen() {
               </ThemedText>
               <ProgressBar progress={stats[stat] % 100} color="#81C784" />
               <TouchableOpacity
-                style={[
-                  styles.bigButton,
-                  levelPoints <= 0 && styles.buttonDisabled,
-                ]}
+                style={[styles.bigButton, levelPoints <= 0 && styles.buttonDisabled]}
                 onPress={() => handleUpgrade(stat)}
                 disabled={levelPoints <= 0}
               >
-                <ThemedText style={styles.bigButtonText}>
-                  Upgrade +1
-                </ThemedText>
+                <ThemedText style={styles.bigButtonText}>Upgrade +1</ThemedText>
               </TouchableOpacity>
             </View>
           ))}
         </ThemedView>
 
-        <TouchableOpacity
-          style={styles.bigButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.bigButton} onPress={() => router.push("/(tabs)/profile")}>
           <ThemedText style={styles.bigButtonText}>Back to Profile</ThemedText>
         </TouchableOpacity>
       </ScrollView>
@@ -96,4 +106,3 @@ const styles = StyleSheet.create({
   bigButtonText: { color: "#121212", fontWeight: "bold", fontSize: 16 },
   buttonDisabled: { backgroundColor: "#555" },
 });
-
