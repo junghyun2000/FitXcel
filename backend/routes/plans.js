@@ -3,6 +3,7 @@ const router = express.Router();
 const connectDB = require('../db');
 const auth = require('../middleware/auth');
 const { ObjectId } = require('mongodb');
+const cors = require('cors');
 
 console.log("✅ plans.js routes loaded");
 
@@ -160,35 +161,42 @@ router.delete('/today/entry/:id', auth, async (req, res) => {
   res.json({ ok: true, deleted: result.deletedCount });
 });
 
-router.get('/history', auth, async (req, res) => {
-  try {
-    const entries = req.db.collection('entries');
-    const userId = req.user.id;
+router.get(
+  '/history',
+  cors({
+    origin: [
+      'http://localhost:19006',  // Expo web dev URL
+      'http://127.0.0.1:19006',
+      'http://localhost:8081',   // optional: other local dev ports
+      'https://fitxcel.onrender.com', // allow API domain too
+    ],
+    methods: ['GET'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }),
+  auth,
+  async (req, res) => {
+    try {
+      const entries = req.db.collection('entries');
+      const userId = req.user.id;
 
-    console.log("📦 /plans/history for user:", userId);
+      console.log("📦 /plans/history for user:", userId);
 
-    // show one example from DB for debugging
-    const sample = await entries.findOne({});
-    console.log("🧾 sample entry in DB:", sample);
+      const today = new Date();
+      const twoWeeksAgo = new Date(today);
+      twoWeeksAgo.setDate(today.getDate() - 14);
+      const cutoff = twoWeeksAgo.toISOString().slice(0, 10);
 
-    const today = new Date();
-    const twoWeeksAgo = new Date(today);
-    twoWeeksAgo.setDate(today.getDate() - 14);
-    const cutoff = twoWeeksAgo.toISOString().slice(0, 10);
-    console.log("📅 cutoff:", cutoff);
+      const data = await entries
+        .find({ userId, date: { $gte: cutoff } })
+        .sort({ date: -1 })
+        .toArray();
 
-    const data = await entries
-      .find({ userId, date: { $gte: cutoff } })
-      .sort({ date: -1 })
-      .toArray();
-
-    console.log("✅ returned entries:", data.length);
-
-    res.json({ history: data });
-  } catch (err) {
-    console.error("Error fetching history:", err);
-    res.status(500).json({ error: "Failed to fetch calorie history" });
+      res.json({ history: data });
+    } catch (err) {
+      console.error("Error fetching history:", err);
+      res.status(500).json({ error: "Failed to fetch calorie history" });
+    }
   }
-});
+);
 
 module.exports = router;
