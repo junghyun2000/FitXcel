@@ -176,6 +176,7 @@ router.get(
   auth,
   async (req, res) => {
     try {
+      const db = await connectDB();
       const entries = req.db.collection('entries');
       const userId = req.user.id;
 
