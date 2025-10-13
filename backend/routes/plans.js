@@ -176,8 +176,14 @@ router.get(
   auth,
   async (req, res) => {
     try {
+      // ✅ Always call connectDB here, same as your working routes
       const db = await connectDB();
-      const entries = req.db.collection('entries');
+      if (!db) {
+        console.error('❌ connectDB() returned undefined');
+        return res.status(500).json({ error: 'Database connection failed' });
+      }
+
+      const entries = db.collection('entries');
       const userId = req.user.id;
 
       const today = new Date();
@@ -189,7 +195,7 @@ router.get(
 
       const data = await entries
         .find({
-          $or: [{ userId: req.user.id }, { userId: String(req.user._id) }],
+          userId,
           createdAt: { $gte: thirtyDaysAgo },
         })
         .sort({ createdAt: -1 })
