@@ -165,10 +165,10 @@ router.get(
   '/history',
   cors({
     origin: [
-      'http://localhost:19006',  // Expo web dev URL
+      'http://localhost:19006',
       'http://127.0.0.1:19006',
-      'http://localhost:8081',   // optional: other local dev ports
-      'https://fitxcel.onrender.com', // allow API domain too
+      'http://localhost:8081',
+      'https://fitxcel.onrender.com',
     ],
     methods: ['GET'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -179,21 +179,31 @@ router.get(
       const entries = req.db.collection('entries');
       const userId = req.user.id;
 
-      console.log("📦 /plans/history for user:", userId);
+      console.log("📦 /plans/history called for user:", userId);
 
       const today = new Date();
       const twoWeeksAgo = new Date(today);
       twoWeeksAgo.setDate(today.getDate() - 14);
       const cutoff = twoWeeksAgo.toISOString().slice(0, 10);
+      console.log("📅 cutoff:", cutoff);
 
       const data = await entries
-        .find({ userId, date: { $gte: cutoff } })
-        .sort({ date: -1 })
+        .find({
+          $or: [
+            { userId: req.user.id },
+            { userId: String(req.user._id) }
+          ],
+          createdAt: { $gte: twoWeeksAgo }, // use createdAt timestamp instead of date string
+        })
+        .sort({ createdAt: -1 })
         .toArray();
+
+      console.log("✅ entries found:", data.length);
+      if (data.length > 0) console.log("🧾 sample entry:", data[0]);
 
       res.json({ history: data });
     } catch (err) {
-      console.error("Error fetching history:", err);
+      console.error("❌ Error fetching history:", err);
       res.status(500).json({ error: "Failed to fetch calorie history" });
     }
   }
