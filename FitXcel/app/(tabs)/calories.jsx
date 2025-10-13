@@ -335,9 +335,17 @@ export default function CaloriePage() {
               <GoalEditor goal={goal} setGoal={setGoal} />
             </View>
 
-            {/* Reset button at bottom */}
+            {/* Reset button */}
             <Pressable style={[styles.btnGhost, { alignSelf: 'center', marginTop: 8 }]} onPress={resetToday}>
               <Text style={styles.btnGhostText}>Reset today</Text>
+            </Pressable>
+
+            {/* History button */}
+            <Pressable
+              style={[styles.btn, { backgroundColor: '#3b82f6', alignSelf: 'center' }]}
+              onPress={() => router.push('/caloriehistory')}
+            >
+              <Text style={styles.btnText}>View Calorie History</Text>
             </Pressable>
           </View>
         }
