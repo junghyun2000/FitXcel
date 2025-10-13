@@ -179,32 +179,26 @@ router.get(
       const entries = req.db.collection('entries');
       const userId = req.user.id;
 
-      console.log("📦 /plans/history called for user:", userId);
-
       const today = new Date();
-      const twoWeeksAgo = new Date(today);
-      twoWeeksAgo.setDate(today.getDate() - 14);
-      const cutoff = twoWeeksAgo.toISOString().slice(0, 10);
-      console.log("📅 cutoff:", cutoff);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+
+      console.log('📦 /plans/history for user:', userId);
+      console.log('📅 cutoff (30 days ago):', thirtyDaysAgo.toISOString());
 
       const data = await entries
         .find({
-          $or: [
-            { userId: req.user.id },
-            { userId: String(req.user._id) }
-          ],
-          createdAt: { $gte: twoWeeksAgo }, // use createdAt timestamp instead of date string
+          $or: [{ userId: req.user.id }, { userId: String(req.user._id) }],
+          createdAt: { $gte: thirtyDaysAgo },
         })
         .sort({ createdAt: -1 })
         .toArray();
 
-      console.log("✅ entries found:", data.length);
-      if (data.length > 0) console.log("🧾 sample entry:", data[0]);
-
+      console.log('✅ entries found:', data.length);
       res.json({ history: data });
     } catch (err) {
-      console.error("❌ Error fetching history:", err);
-      res.status(500).json({ error: "Failed to fetch calorie history" });
+      console.error('❌ Error fetching history:', err);
+      res.status(500).json({ error: 'Failed to fetch calorie history' });
     }
   }
 );
