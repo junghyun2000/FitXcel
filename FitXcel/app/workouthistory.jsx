@@ -1,25 +1,32 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function WorkoutHistory() {
-  const router = useRouter(); // router for navigation
-  const [workouts, setWorkouts] = useState([]); // state to store workout sessions
-  const [loading, setLoading] = useState(true); // loading indicator
+  const router = useRouter();
+  const [workouts, setWorkouts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch workouts from backend when component mounts
   useEffect(() => {
     const fetchWorkouts = async () => {
       try {
-        const token = await AsyncStorage.getItem("token"); // get saved JWT token
+        const token = await AsyncStorage.getItem("token");
         if (!token) {
-          Alert.alert("Not Logged In", "Please log in first."); // notify if no token
+          Alert.alert("Not Logged In", "Please log in first.");
           setLoading(false);
           return;
         }
 
-        // request workouts from API
         const res = await fetch("http://localhost:4000/workout", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -27,11 +34,10 @@ export default function WorkoutHistory() {
         const data = await res.json();
 
         if (res.ok) {
-          // normalise workout data into a consistent format
           const formattedWorkouts = (data.workouts || []).map((w, idx) => ({
-            id: w.id ? w.id : `fallback-${idx}`, // ensure unique id
-            date: w.date ? new Date(w.date) : new Date(), // parse or fallback to now
-            exercises: w.exercises || {}, // exercises with sets
+            id: w.id ? w.id : `fallback-${idx}`,
+            date: w.date ? new Date(w.date) : new Date(),
+            exercises: w.exercises || {},
           }));
           setWorkouts(formattedWorkouts);
         } else {
@@ -41,25 +47,24 @@ export default function WorkoutHistory() {
         console.error(err);
         Alert.alert("Error", "Could not connect to server.");
       } finally {
-        setLoading(false); // stop loading spinner
+        setLoading(false);
       }
     };
 
     fetchWorkouts();
-  }, []); // run once on mount
+  }, []);
 
-  // Show loading spinner while fetching data
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+      <SafeAreaView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator size="large" color="#22c55e" />
         <Text style={{ color: "#fff", marginTop: 10 }}>Loading workouts...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#0b0b0c" }}>
+    <SafeAreaView style={styles.container}>
       {/* Header with back button */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -69,15 +74,12 @@ export default function WorkoutHistory() {
       </View>
 
       {/* Main scrollable content */}
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 16 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
         {workouts.length === 0 ? (
-          // Show message if no workouts are found
           <Text style={styles.noData}>No workouts logged yet.</Text>
         ) : (
-          // Render each workout session
           workouts.map((session) => (
             <View key={session.id} style={styles.sessionCard}>
-              {/* Session date */}
               <Text style={styles.sessionDate}>
                 {session.date.toLocaleString(undefined, {
                   weekday: "short",
@@ -90,15 +92,15 @@ export default function WorkoutHistory() {
                 })}
               </Text>
 
-              {/* Exercises inside this session */}
               {Object.keys(session.exercises).map((exerciseName) => (
-                <View key={`${session.id}-${exerciseName}`} style={styles.exerciseCard}>
+                <View
+                  key={`${session.id}-${exerciseName}`}
+                  style={styles.exerciseCard}
+                >
                   <Text style={styles.exerciseTitle}>{exerciseName}</Text>
-
-                  {/* Sets inside each exercise */}
                   {session.exercises[exerciseName].map((set, index) => (
                     <Text
-                      key={`${session.id}-${exerciseName}-${set.weight}-${set.reps}-${index}`}
+                      key={`${session.id}-${exerciseName}-${index}`}
                       style={styles.setText}
                     >
                       Set {index + 1}: {set.weight || 0}kg × {set.reps || 0} reps
@@ -110,82 +112,57 @@ export default function WorkoutHistory() {
           ))
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
-// Styles for the UI
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 16 
-  },
+  container: { flex: 1, backgroundColor: "#0B1220", padding: 16 },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0b0b0c",
+    backgroundColor: "#0B1220",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1b20",
-    zIndex: 1000,
+    borderBottomColor: "#1E293B",
   },
   backButton: {
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#3B82F6",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
   },
-  backButtonText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    fontWeight: "600" 
-  },
+  backButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   headerTitle: {
-    color: "#fff",
-    fontSize: 22,
+    color: "#E5E7EB",
+    fontSize: 20,
     fontWeight: "700",
     marginLeft: 16,
   },
-  title: { 
-    color: "#fff", 
-    fontSize: 22, 
-    fontWeight: "700", 
-    marginBottom: 16, 
-    textAlign: "center" 
-  },
-  noData: { 
-    color: "#fff", 
-    fontSize: 16, 
-    textAlign: "center" 
-  },
+  noData: { color: "#E5E7EB", fontSize: 16, textAlign: "center", marginTop: 20 },
   sessionCard: {
     marginBottom: 24,
-    padding: 12,
-    backgroundColor: "#1a1b20",
-    borderRadius: 12,
+    padding: 14,
+    backgroundColor: "#0F172A",
+    borderColor: "#1E293B",
+    borderWidth: 1,
+    borderRadius: 14,
   },
-  sessionDate: { 
-    color: "#9ca3af", 
-    fontSize: 14, 
-    marginBottom: 8, 
-    textAlign: "center" 
+  sessionDate: { color: "#94A3B8", fontSize: 14, marginBottom: 8, textAlign: "center" },
+  exerciseCard: {
+    marginBottom: 14,
+    backgroundColor: "#0B1220",
+    borderWidth: 1,
+    borderColor: "#1F2937",
+    borderRadius: 10,
+    padding: 10,
   },
-  exerciseCard: { 
-    marginBottom: 16, 
-    backgroundColor: "#121318", 
-    padding: 12, 
-    borderRadius: 10 
+  exerciseTitle: {
+    color: "#22C55E",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 6,
   },
-  exerciseTitle: { 
-    color: "#22c55e", 
-    fontSize: 18, 
-    fontWeight: "700", 
-    marginBottom: 6 
-  },
-  setText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    marginLeft: 8 
-  },
+  setText: { color: "#E5E7EB", fontSize: 16, marginLeft: 8 },
 });
