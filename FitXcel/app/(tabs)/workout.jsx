@@ -20,9 +20,28 @@ export default function WorkoutLog() {
     exampleExercises.map((ex) => ({ label: ex, value: ex })) // dropdown options
   );
 
+  // Input state for custom exercises
+  const [newExercise, setNewExercise] = useState("");
+
   // Workout log state
   const [workouts, setWorkouts] = useState({}); // object keyed by exercise name
   const [loading, setLoading] = useState(true); // loading state when fetching
+
+  // Load any saved custom exercises when component mounts
+  useEffect(() => {
+    async function loadExercises() {
+      const saved = await AsyncStorage.getItem("customExercises");
+      if (saved) {
+        const custom = JSON.parse(saved);
+        setItems((prev) => [
+          ...prev,
+          ...custom.map((e) => ({ label: e, value: e })),
+        ]);
+      }
+    }
+    loadExercises();
+  }, []);
+
 
   // Fetch workouts from backend when component mounts
   useEffect(() => {
@@ -76,6 +95,41 @@ export default function WorkoutLog() {
         [exercise]: [{ id: 1, weight: "", reps: "" }],
       });
     }
+  };
+
+  // Add a new custom exercise
+  const addNewExercise = async () => {
+    if (!newExercise.trim()) {
+      Alert.alert("Error", "Please enter an exercise name.");
+      return;
+    }
+
+    const formattedName = newExercise.trim();
+
+    // prevent duplicates
+    if (
+      items.some(
+        (item) => item.value.toLowerCase() === formattedName.toLowerCase()
+      )
+    ) {
+      Alert.alert("Duplicate", "This exercise already exists.");
+      return;
+    }
+
+    const newItem = { label: formattedName, value: formattedName };
+    setItems((prev) => [...prev, newItem]);
+    setExercise(formattedName);
+    setNewExercise("");
+
+    // save to AsyncStorage
+    const saved = await AsyncStorage.getItem("customExercises");
+    const existing = saved ? JSON.parse(saved) : [];
+    await AsyncStorage.setItem(
+      "customExercises",
+      JSON.stringify([...existing, formattedName])
+    );
+
+    Alert.alert("Added", `${formattedName} added to exercises!`);
   };
 
   // Add a new set to an existing exercise
@@ -202,7 +256,7 @@ export default function WorkoutLog() {
         >
           <Text style={styles.title}>Log Workout</Text>
 
-          {/* Dropdown + add exercise button */}
+          {/* Dropdown + custom exercise input */}
           <View style={styles.dropdownWrapper}>
             <DropDownPicker
               open={open}
@@ -217,8 +271,25 @@ export default function WorkoutLog() {
               dropDownContainerStyle={styles.dropdownContainer}
               zIndex={1000}
             />
+
+            {/* New input + button for adding custom exercise */}
+            <TextInput
+              style={styles.newExerciseInput}
+              placeholder="Add new exercise..."
+              placeholderTextColor="#9ca3af"
+              value={newExercise}
+              onChangeText={setNewExercise}
+            />
+
+            <TouchableOpacity
+              style={[styles.addButton, { backgroundColor: "#3b82f6" }]}
+              onPress={addNewExercise}
+            >
+              <Text style={styles.addButtonText}>+ Add Custom Exercise</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.addButton} onPress={addExercise}>
-              <Text style={styles.addButtonText}>+ Add Exercise</Text>
+              <Text style={styles.addButtonText}>+ Add Exercise to Log</Text>
             </TouchableOpacity>
           </View>
 
@@ -397,5 +468,16 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 17,
     fontWeight: "700",
+  },
+  newExerciseInput: {
+    backgroundColor: "#0f1016",
+    borderColor: "#1f2530",
+    borderWidth: 1,
+    borderRadius: 10,
+    color: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 8,
+    fontSize: 16,
   },
 });

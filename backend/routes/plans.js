@@ -3,6 +3,9 @@ const router = express.Router();
 const connectDB = require('../db');
 const auth = require('../middleware/auth');
 const { ObjectId } = require('mongodb');
+const cors = require('cors');
+
+console.log("✅ plans.js routes loaded");
 
 // Add a saved meal to today’s entries
 router.post('/today/add', auth, async (req, res) => {
@@ -157,5 +160,54 @@ router.delete('/today/entry/:id', auth, async (req, res) => {
   });
   res.json({ ok: true, deleted: result.deletedCount });
 });
+
+router.get(
+  '/history',
+  cors({
+    origin: [
+      'http://localhost:19006',
+      'http://127.0.0.1:19006',
+      'http://localhost:8081',
+      'https://fitxcel.onrender.com',
+    ],
+    methods: ['GET'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }),
+  auth,
+  async (req, res) => {
+    try {
+      // ✅ Always call connectDB here, same as your working routes
+      const db = await connectDB();
+      if (!db) {
+        console.error('❌ connectDB() returned undefined');
+        return res.status(500).json({ error: 'Database connection failed' });
+      }
+
+      const entries = db.collection('entries');
+      const userId = req.user.id;
+
+      const today = new Date();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+
+      console.log('📦 /plans/history for user:', userId);
+      console.log('📅 cutoff (30 days ago):', thirtyDaysAgo.toISOString());
+
+      const data = await entries
+        .find({
+          userId,
+          createdAt: { $gte: thirtyDaysAgo },
+        })
+        .sort({ createdAt: -1 })
+        .toArray();
+
+      console.log('✅ entries found:', data.length);
+      res.json({ history: data });
+    } catch (err) {
+      console.error('❌ Error fetching history:', err);
+      res.status(500).json({ error: 'Failed to fetch calorie history' });
+    }
+  }
+);
 
 module.exports = router;
