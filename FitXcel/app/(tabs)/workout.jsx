@@ -347,9 +347,12 @@ export default function WorkoutLog() {
               );
             })}
 
-          {/* Save workout button */}
-          <TouchableOpacity style={styles.finishButton} onPress={finishWorkout}>
-            <Text style={styles.finishButtonText}>Finish Workout</Text>
+          {/* Navigate to search screen */}
+          <TouchableOpacity
+            style={[styles.finishButton, { backgroundColor: "#3b82f6" }]}
+            onPress={() => router.push("/workoutsearch")}
+          >
+            <Text style={styles.finishButtonText}>Search Exercises</Text>
           </TouchableOpacity>
 
           {/* Navigate to history screen */}
@@ -358,6 +361,11 @@ export default function WorkoutLog() {
             onPress={() => router.push("/workouthistory")}
           >
             <Text style={styles.finishButtonText}>See Workout History</Text>
+          </TouchableOpacity>
+
+          {/* Save workout button */}
+          <TouchableOpacity style={styles.finishButton} onPress={finishWorkout}>
+            <Text style={styles.finishButtonText}>Finish Workout</Text>
           </TouchableOpacity>
 
         </ScrollView>
