@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Keyboa
 import DropDownPicker from "react-native-dropdown-picker";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { apiGet, apiPost, BASE_URL } from '../../utils/api';
 
 // Example exercise list for dropdown
@@ -12,13 +12,13 @@ const exampleExercises = ["Bench Press", "Squats", "Deadlift"];
 export default function WorkoutLog() {
   const insets = useSafeAreaInsets(); // for safe area padding
   const router = useRouter(); // navigation
+  const { selectedExercise } = useLocalSearchParams();
 
   // Dropdown state
   const [open, setOpen] = useState(false); // controls dropdown open/close
   const [exercise, setExercise] = useState(exampleExercises[0]); // selected exercise
-  const [items, setItems] = useState(
-    exampleExercises.map((ex) => ({ label: ex, value: ex })) // dropdown options
-  );
+  const [items, setItems] = useState([]);
+
 
   // Input state for custom exercises
   const [newExercise, setNewExercise] = useState("");
@@ -42,6 +42,20 @@ export default function WorkoutLog() {
     loadExercises();
   }, []);
 
+  useEffect(() => {
+    const loadDropdownItems = async () => {
+      try {
+        const stored = await AsyncStorage.getItem("exerciseDropdownItems");
+        if (stored) {
+          setItems(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.error("Error loading saved dropdown:", error);
+      }
+    };
+
+    loadDropdownItems();
+  }, []);
 
   // Fetch workouts from backend when component mounts
   useEffect(() => {
@@ -85,6 +99,50 @@ export default function WorkoutLog() {
 
     fetchWorkouts();
   }, []); // runs once when component mounts
+
+  useEffect(() => {
+    const saveExerciseToStorage = async (exerciseName) => {
+      try {
+        // Get the currently saved list
+        const stored = await AsyncStorage.getItem("exerciseDropdownItems");
+        let existing = stored ? JSON.parse(stored) : [];
+
+        // Check if it's already there
+        const alreadyExists = existing.some(
+          (item) => item.value.toLowerCase() === exerciseName.toLowerCase()
+        );
+
+        if (!alreadyExists) {
+          // Add new exercise and save merged list
+          const newItem = { label: exerciseName, value: exerciseName };
+          const updated = [...existing, newItem];
+          await AsyncStorage.setItem("exerciseDropdownItems", JSON.stringify(updated));
+          setItems(updated); // Update dropdown in state too
+          Alert.alert("Exercise Added", `${exerciseName} has been added to your exercise list.`);
+        } else {
+          // If it already exists, just ensure it’s in the current dropdown
+          setItems(existing);
+        }
+      } catch (error) {
+        console.error("Error saving exercise dropdown:", error);
+      }
+    };
+
+    if (selectedExercise) {
+      // Save + merge in storage
+      saveExerciseToStorage(selectedExercise);
+
+      // Select the exercise
+      setExercise(selectedExercise);
+
+      // Add to workouts if needed
+      setWorkouts((prev) => ({
+        ...prev,
+        [selectedExercise]:
+          prev[selectedExercise] || [{ id: 1, weight: "", reps: "" }],
+      }));
+    }
+  }, [selectedExercise]);
 
 
   // Add a new exercise with 1 empty set

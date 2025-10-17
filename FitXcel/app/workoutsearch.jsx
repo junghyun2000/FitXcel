@@ -101,6 +101,28 @@ export default function ExerciseSearch() {
                 Equipment: {item.equipment || "None"}
               </Text>
               <Text style={styles.instructions}>{item.instructions}</Text>
+
+
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#22c55e",
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  marginTop: 10,
+                  alignItems: "center",
+                }}
+                onPress={() =>
+                  router.push({
+                    pathname: "/workout",
+                    params: { selectedExercise: item.name },
+                  })
+                }
+              >
+                <Text style={{ color: "#fff", fontWeight: "700" }}>
+                  + Add to Workout Log
+                </Text>
+              </TouchableOpacity>
+
             </View>
           )}
           ListEmptyComponent={
