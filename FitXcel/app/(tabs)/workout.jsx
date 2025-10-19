@@ -1,33 +1,38 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, StatusBar, Alert, ActivityIndicator, } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { apiGet, apiPost, BASE_URL } from '../../utils/api';
+import { apiGet, apiPost, BASE_URL } from "../../utils/api";
 
-// Example exercise list for dropdown
 const exampleExercises = ["Bench Press", "Squats", "Deadlift"];
 
 export default function WorkoutLog() {
-  const insets = useSafeAreaInsets(); // for safe area padding
-  const router = useRouter(); // navigation
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
 
-  // Dropdown state
-  const [open, setOpen] = useState(false); // controls dropdown open/close
-  const [exercise, setExercise] = useState(exampleExercises[0]); // selected exercise
+  const [open, setOpen] = useState(false);
+  const [exercise, setExercise] = useState(exampleExercises[0]);
   const [items, setItems] = useState(
-    exampleExercises.map((ex) => ({ label: ex, value: ex })) // dropdown options
+    exampleExercises.map((ex) => ({ label: ex, value: ex }))
   );
-
-  // Input state for custom exercises
   const [newExercise, setNewExercise] = useState("");
+  const [workouts, setWorkouts] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  // Workout log state
-  const [workouts, setWorkouts] = useState({}); // object keyed by exercise name
-  const [loading, setLoading] = useState(true); // loading state when fetching
-
-  // Load any saved custom exercises when component mounts
   useEffect(() => {
     async function loadExercises() {
       const saved = await AsyncStorage.getItem("customExercises");
@@ -42,15 +47,12 @@ export default function WorkoutLog() {
     loadExercises();
   }, []);
 
-
-  // Fetch workouts from backend when component mounts
   useEffect(() => {
     async function fetchWorkouts() {
       try {
-        const token = await AsyncStorage.getItem("token"); // get auth token
-        if (!token) return; // skip if not logged in
+        const token = await AsyncStorage.getItem("token");
+        if (!token) return;
 
-        // fetch workouts from API using BASE_URL
         const res = await fetch(`${BASE_URL}/workout`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -58,19 +60,18 @@ export default function WorkoutLog() {
         const data = await res.json();
         if (res.ok) {
           const transformedWorkouts = {};
-
-          // transform server data into local format
           Object.keys(data.workouts || {}).forEach((exName) => {
-            const sets = Array.isArray(data.workouts[exName]) ? data.workouts[exName] : [];
+            const sets = Array.isArray(data.workouts[exName])
+              ? data.workouts[exName]
+              : [];
             transformedWorkouts[exName] = sets.map((s, index) => ({
               id: index + 1,
-              weight: "", // empty until user inputs
-              reps: "",   // empty until user inputs
-              previousWeight: s.weight || 0, // last recorded weight
-              previousReps: s.reps || 0,     // last recorded reps
+              weight: "",
+              reps: "",
+              previousWeight: s.weight || 0,
+              previousReps: s.reps || 0,
             }));
           });
-
           setWorkouts(transformedWorkouts);
         } else {
           Alert.alert("Error", data.error || "Failed to load workouts");
@@ -79,15 +80,13 @@ export default function WorkoutLog() {
         console.error(err);
         Alert.alert("Error", "Could not connect to server.");
       } finally {
-        setLoading(false); // stop loading spinner
+        setLoading(false);
       }
     }
 
     fetchWorkouts();
-  }, []); // runs once when component mounts
+  }, []);
 
-
-  // Add a new exercise with 1 empty set
   const addExercise = () => {
     if (!workouts[exercise]) {
       setWorkouts({
@@ -97,16 +96,12 @@ export default function WorkoutLog() {
     }
   };
 
-  // Add a new custom exercise
   const addNewExercise = async () => {
     if (!newExercise.trim()) {
       Alert.alert("Error", "Please enter an exercise name.");
       return;
     }
-
     const formattedName = newExercise.trim();
-
-    // prevent duplicates
     if (
       items.some(
         (item) => item.value.toLowerCase() === formattedName.toLowerCase()
@@ -115,28 +110,23 @@ export default function WorkoutLog() {
       Alert.alert("Duplicate", "This exercise already exists.");
       return;
     }
-
     const newItem = { label: formattedName, value: formattedName };
     setItems((prev) => [...prev, newItem]);
     setExercise(formattedName);
     setNewExercise("");
-
-    // save to AsyncStorage
     const saved = await AsyncStorage.getItem("customExercises");
     const existing = saved ? JSON.parse(saved) : [];
     await AsyncStorage.setItem(
       "customExercises",
       JSON.stringify([...existing, formattedName])
     );
-
     Alert.alert("Added", `${formattedName} added to exercises!`);
   };
 
-  // Add a new set to an existing exercise
   const addSet = (exerciseName) => {
     const currentSets = workouts[exerciseName] || [];
     const newSet = {
-      id: currentSets.length + 1, // increment set number
+      id: currentSets.length + 1,
       weight: "",
       reps: "",
     };
@@ -146,24 +136,22 @@ export default function WorkoutLog() {
     });
   };
 
-  // Update a specific field (weight/reps) for a given set
   const updateSet = (exerciseName, setId, field, value) => {
-    const updatedSets = workouts[exerciseName].map((set) => {
-      if (set.id === setId) {
-        return {
-          ...set,
-          [field]: value, // update weight or reps
-          // keep previous values unless user overwrites
-          previousWeight: field === "weight" && value ? value : set.previousWeight,
-          previousReps: field === "reps" && value ? value : set.previousReps,
-        };
-      }
-      return set;
-    });
+    const updatedSets = workouts[exerciseName].map((set) =>
+      set.id === setId
+        ? {
+            ...set,
+            [field]: value,
+            previousWeight:
+              field === "weight" && value ? value : set.previousWeight,
+            previousReps:
+              field === "reps" && value ? value : set.previousReps,
+          }
+        : set
+    );
     setWorkouts({ ...workouts, [exerciseName]: updatedSets });
   };
 
-  // Save workout to backend
   const finishWorkout = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -172,19 +160,18 @@ export default function WorkoutLog() {
         return;
       }
 
-      // Build payload: only include sets with data
       const payloadWorkouts = {};
       Object.keys(workouts).forEach((exName) => {
         const sets = workouts[exName] || [];
         const filteredSets = sets
-          .filter(s => s.weight || s.reps || s.previousWeight || s.previousReps) // skip empty sets
+          .filter(
+            (s) => s.weight || s.reps || s.previousWeight || s.previousReps
+          )
           .map((s) => ({
             weight: s.weight || s.previousWeight || 0,
             reps: s.reps || s.previousReps || 0,
           }));
-        if (filteredSets.length > 0) {
-          payloadWorkouts[exName] = filteredSets;
-        }
+        if (filteredSets.length > 0) payloadWorkouts[exName] = filteredSets;
       });
 
       if (Object.keys(payloadWorkouts).length === 0) {
@@ -192,7 +179,6 @@ export default function WorkoutLog() {
         return;
       }
 
-      // POST workout to server using BASE_URL
       const response = await fetch(`${BASE_URL}/workout`, {
         method: "POST",
         headers: {
@@ -207,7 +193,6 @@ export default function WorkoutLog() {
 
       Alert.alert("Success", "Workout saved!");
 
-      // Reset input fields but keep last entered values as "previous"
       const clearedWorkouts = {};
       Object.keys(workouts).forEach((exName) => {
         const currentSets = workouts[exName] || [];
@@ -219,44 +204,34 @@ export default function WorkoutLog() {
           previousReps: s.reps ? s.reps : s.previousReps || "",
         }));
       });
-
       setWorkouts(clearedWorkouts);
-
     } catch (error) {
       console.error(error);
       Alert.alert("Error", "Could not save workout");
     }
   };
 
-  // Show loading spinner while fetching workouts
   if (loading) {
     return (
-      <View style={[styles.scrollContent, { flex: 1, justifyContent: "center", alignItems: "center" }]}>
+      <SafeAreaView style={[styles.safeContainer, { justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator size="large" color="#22c55e" />
         <Text style={{ color: "#fff", marginTop: 10 }}>Loading workouts...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: "#0b0b0c",
-        paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0,
-      }}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={[styles.safeContainer, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 16 }]}
+          showsVerticalScrollIndicator={false}
         >
           <Text style={styles.title}>Log Workout</Text>
 
-          {/* Dropdown + custom exercise input */}
           <View style={styles.dropdownWrapper}>
             <DropDownPicker
               open={open}
@@ -272,7 +247,6 @@ export default function WorkoutLog() {
               zIndex={1000}
             />
 
-            {/* New input + button for adding custom exercise */}
             <TextInput
               style={styles.newExerciseInput}
               placeholder="Add new exercise..."
@@ -293,42 +267,49 @@ export default function WorkoutLog() {
             </TouchableOpacity>
           </View>
 
-          {/* Render workout cards for each exercise */}
           {Object.keys(workouts)
-            .filter(exName => workouts[exName] && workouts[exName].length > 0)
+            .filter((exName) => workouts[exName]?.length > 0)
             .map((exName) => {
-              const sets = workouts[exName]; // array of sets
+              const sets = workouts[exName];
               return (
                 <View key={exName} style={styles.exerciseCard}>
                   <Text style={styles.exerciseTitle}>{exName}</Text>
 
-                  {/* Render each set for this exercise */}
                   {sets.map((set) => (
                     <View key={set.id} style={styles.setCard}>
                       <Text style={styles.setLabel}>Set {set.id}</Text>
-
-                      {/* Show last session data if available */}
                       <Text style={styles.previous}>
                         {set.previousWeight && set.previousReps
                           ? `${set.previousWeight}kg x ${set.previousReps}`
                           : "No previous"}
                       </Text>
 
-                      {/* Inputs for weight and reps */}
                       <View style={styles.inputsRow}>
                         <TextInput
-                          placeholder={set.previousWeight ? `${set.previousWeight}kg` : "Weight(kg)"}
+                          placeholder={
+                            set.previousWeight
+                              ? `${set.previousWeight}kg`
+                              : "Weight(kg)"
+                          }
                           placeholderTextColor="#9ca3af"
                           value={set.weight}
-                          onChangeText={(text) => updateSet(exName, set.id, "weight", text)}
+                          onChangeText={(text) =>
+                            updateSet(exName, set.id, "weight", text)
+                          }
                           style={styles.input}
                           keyboardType="numeric"
                         />
                         <TextInput
-                          placeholder={set.previousReps ? `${set.previousReps} reps` : "Reps"}
+                          placeholder={
+                            set.previousReps
+                              ? `${set.previousReps} reps`
+                              : "Reps"
+                          }
                           placeholderTextColor="#9ca3af"
                           value={set.reps}
-                          onChangeText={(text) => updateSet(exName, set.id, "reps", text)}
+                          onChangeText={(text) =>
+                            updateSet(exName, set.id, "reps", text)
+                          }
                           style={styles.input}
                           keyboardType="numeric"
                         />
@@ -336,7 +317,6 @@ export default function WorkoutLog() {
                     </View>
                   ))}
 
-                  {/* Button to add another set */}
                   <TouchableOpacity
                     style={styles.addSetButton}
                     onPress={() => addSet(exName)}
@@ -347,83 +327,68 @@ export default function WorkoutLog() {
               );
             })}
 
-          {/* Save workout button */}
           <TouchableOpacity style={styles.finishButton} onPress={finishWorkout}>
             <Text style={styles.finishButtonText}>Finish Workout</Text>
           </TouchableOpacity>
 
-          {/* Navigate to history screen */}
           <TouchableOpacity
             style={[styles.finishButton, { backgroundColor: "#3b82f6" }]}
             onPress={() => router.push("/workouthistory")}
           >
             <Text style={styles.finishButtonText}>See Workout History</Text>
           </TouchableOpacity>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// Styles
 const styles = StyleSheet.create({
+  safeContainer: {
+    flex: 1,
+    backgroundColor: "#0b0b0c",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
   scrollContent: { padding: 16, gap: 16 },
   title: { fontSize: 22, fontWeight: "800", color: "#fff", alignSelf: "center" },
-
   dropdownWrapper: { zIndex: 1000, marginBottom: 16 },
-  dropdown: { backgroundColor: "#0f1016", borderColor: "#1f2530", borderRadius: 12, marginBottom: 8 },
+  dropdown: {
+    backgroundColor: "#0f1016",
+    borderColor: "#1f2530",
+    borderRadius: 12,
+    marginBottom: 8,
+  },
   dropdownContainer: { backgroundColor: "#0f1016", borderColor: "#1f2530" },
-
-  addButton:
-  {
+  addButton: {
     backgroundColor: "#22c55e",
     paddingVertical: 10,
     borderRadius: 10,
     alignItems: "center",
     marginTop: 8,
   },
-  addButtonText:
-  {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700"
-  },
-  exerciseCard:
-  {
+  addButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  exerciseCard: {
     backgroundColor: "#121318",
     borderRadius: 14,
     padding: 16,
     marginBottom: 16,
-    elevation: 3,
   },
-  exerciseTitle:
-  {
+  exerciseTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#fff",
-    marginBottom: 12
+    marginBottom: 12,
   },
-  setCard:
-  {
+  setCard: {
     backgroundColor: "#1a1b20",
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
   },
-  setLabel:
-  {
-    color: "#22c55e",
-    fontWeight: "600",
-    marginBottom: 4
-  },
-  previous:
-  {
-    color: "#9ca3af",
-    marginBottom: 8
-  },
-  input:
-  {
+  setLabel: { color: "#22c55e", fontWeight: "600", marginBottom: 4 },
+  previous: { color: "#9ca3af", marginBottom: 8 },
+  input: {
     flex: 1,
     minWidth: 60,
     maxWidth: "48%",
@@ -436,39 +401,28 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 16,
   },
-  addSetButton:
-  {
+  inputsRow: {
+    flexDirection: "row",
+    gap: 8,
+    flex: 1,
+    justifyContent: "space-between",
+  },
+  addSetButton: {
     backgroundColor: "#3b82f6",
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 6,
   },
-  addSetButtonText:
-  {
-    color: "#fff", fontSize: 15, fontWeight: "600"
-  },
-  inputsRow:
-  {
-    flexDirection: "row",
-    gap: 8,
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  finishButton:
-  {
+  addSetButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  finishButton: {
     backgroundColor: "#ef4444",
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: "center",
     marginTop: 20,
   },
-  finishButtonText:
-  {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "700",
-  },
+  finishButtonText: { color: "#fff", fontSize: 17, fontWeight: "700" },
   newExerciseInput: {
     backgroundColor: "#0f1016",
     borderColor: "#1f2530",

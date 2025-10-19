@@ -176,13 +176,7 @@ router.get(
   auth,
   async (req, res) => {
     try {
-      // ✅ Always call connectDB here, same as your working routes
       const db = await connectDB();
-      if (!db) {
-        console.error('❌ connectDB() returned undefined');
-        return res.status(500).json({ error: 'Database connection failed' });
-      }
-
       const entries = db.collection('entries');
       const userId = req.user.id;
 
@@ -191,15 +185,39 @@ router.get(
       thirtyDaysAgo.setDate(today.getDate() - 30);
 
       console.log('📦 /plans/history for user:', userId);
-      console.log('📅 cutoff (30 days ago):', thirtyDaysAgo.toISOString());
 
-      const data = await entries
-        .find({
-          userId,
-          createdAt: { $gte: thirtyDaysAgo },
-        })
-        .sort({ createdAt: -1 })
-        .toArray();
+      const data = await entries.aggregate([
+        {
+          $match: {
+            userId,
+            createdAt: { $gte: thirtyDaysAgo },
+          },
+        },
+        {
+          $lookup: {
+            from: 'meals',
+            localField: 'mealId',
+            foreignField: '_id',
+            as: 'mealInfo',
+          },
+        },
+        {
+          $addFields: {
+            meal: { $arrayElemAt: ['$mealInfo', 0] },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            date: 1,
+            createdAt: 1,
+            caloriesAtAdd: 1,
+            name: { $ifNull: ['$meal.name', '$name'] },
+            mealType: { $ifNull: ['$meal.mealType', '$mealType'] },
+          },
+        },
+        { $sort: { createdAt: -1 } },
+      ]).toArray();
 
       console.log('✅ entries found:', data.length);
       res.json({ history: data });

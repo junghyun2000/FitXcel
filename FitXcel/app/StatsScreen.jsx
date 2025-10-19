@@ -86,7 +86,7 @@ export default function StatsScreen() {
           ))}
         </ThemedView>
 
-        <TouchableOpacity style={styles.bigButton} onPress={() => router.push("/(tabs)/profile")}>
+        <TouchableOpacity style={styles.bigButton} onPress={() => router.push("/")}>
           <ThemedText style={styles.bigButtonText}>Back to Profile</ThemedText>
         </TouchableOpacity>
       </ScrollView>
