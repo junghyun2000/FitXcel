@@ -1,19 +1,11 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
-  StyleSheet,
-  Keyboard,
-} from "react-native";
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, } from "react-native";
 import axios from "axios";
 import { useRouter } from "expo-router";
+import { Dropdown } from "react-native-element-dropdown";
 
 export default function ExerciseSearch() {
-  const [query, setQuery] = useState("");
+  const [selectedMuscle, setSelectedMuscle] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,22 +13,36 @@ export default function ExerciseSearch() {
 
   const API_KEY = "7kSjZqGNltiGA8AryiZ6qA==KOkbR3jbLrdv96cB";
 
-  const fetchExercises = async () => {
-    if (!query.trim()) {
-      setError("Please enter a muscle or exercise type.");
-      return;
-    }
+  const muscleGroups = [
+    "abdominals",
+    "abductors",
+    "adductors",
+    "biceps",
+    "calves",
+    "chest",
+    "forearms",
+    "glutes",
+    "hamstrings",
+    "lats",
+    "lower_back",
+    "middle_back",
+    "neck",
+    "quadriceps",
+    "traps",
+    "triceps",
+  ].map((m) => ({ label: m.replace("_", " ").toUpperCase(), value: m }));
+
+  const fetchExercises = async (muscle) => {
+    if (!muscle) return;
+
     setLoading(true);
     setError("");
     setExercises([]);
-    Keyboard.dismiss();
 
     try {
       const response = await axios.get(
-        `https://api.api-ninjas.com/v1/exercises?muscle=${query.toLowerCase()}`,
-        {
-          headers: { "X-Api-Key": API_KEY },
-        }
+        `https://api.api-ninjas.com/v1/exercises?muscle=${muscle}`,
+        { headers: { "X-Api-Key": API_KEY } }
       );
 
       if (response.data.length === 0) {
@@ -59,23 +65,30 @@ export default function ExerciseSearch() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Exercise Finder</Text>
+        <Text style={styles.headerTitle}>Search Exercise</Text>
       </View>
 
-      {/* Search Input */}
       <View style={styles.container}>
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter a muscle (e.g., chest, legs, biceps)"
-            placeholderTextColor="#9ca3af"
-            value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={fetchExercises}
+        <Text style={styles.title}>Select a Muscle Group</Text>
+
+        {/* Dropdown */}
+        <View style={styles.dropdownWrapper}>
+          <Dropdown
+            style={styles.dropdown}
+            containerStyle={styles.dropdownContainer}
+            data={muscleGroups}
+            labelField="label"
+            valueField="value"
+            placeholder="Select Muscle Group"
+            placeholderStyle={{ color: "#9ca3af" }}
+            selectedTextStyle={{ color: "#fff" }}
+            itemTextStyle={{ color: "#fff" }}
+            value={selectedMuscle}
+            onChange={(item) => {
+              setSelectedMuscle(item.value);
+              fetchExercises(item.value);
+            }}
           />
-          <TouchableOpacity style={styles.searchButton} onPress={fetchExercises}>
-            <Text style={styles.searchButtonText}>Search</Text>
-          </TouchableOpacity>
         </View>
 
         {loading && (
@@ -102,15 +115,8 @@ export default function ExerciseSearch() {
               </Text>
               <Text style={styles.instructions}>{item.instructions}</Text>
 
-
               <TouchableOpacity
-                style={{
-                  backgroundColor: "#22c55e",
-                  paddingVertical: 10,
-                  borderRadius: 8,
-                  marginTop: 10,
-                  alignItems: "center",
-                }}
+                style={styles.addButton}
                 onPress={() =>
                   router.push({
                     pathname: "/workout",
@@ -118,15 +124,12 @@ export default function ExerciseSearch() {
                   })
                 }
               >
-                <Text style={{ color: "#fff", fontWeight: "700" }}>
-                  + Add to Workout Log
-                </Text>
+                <Text style={styles.addButtonText}>+ Add to Workout Log</Text>
               </TouchableOpacity>
-
             </View>
           )}
           ListEmptyComponent={
-            !loading && !error ? <Text style={styles.noData}>No exercises yet.</Text> : null
+            !loading && !error ? <Text style={styles.noData}></Text> : null
           }
           contentContainerStyle={{ paddingBottom: 20 }}
         />
@@ -135,12 +138,13 @@ export default function ExerciseSearch() {
   );
 }
 
-// 💪 Consistent styling with WorkoutHistory
+// Styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
+  container: { 
+    flex: 1, 
+    padding: 16 
   },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -149,80 +153,106 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#1a1b20",
-    zIndex: 1000,
   },
+
   backButton: {
     backgroundColor: "#3b82f6",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
   },
-  backButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+
+  backButtonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: "600" 
   },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "700",
-    marginLeft: 16,
+
+  headerTitle: { 
+    color: "#fff", 
+    fontSize: 22, 
+    fontWeight: "700", 
+    marginLeft: 16 
   },
-  searchContainer: {
-    flexDirection: "row",
-    marginBottom: 20,
+
+  title: { 
+    fontSize: 22, 
+    fontWeight: "800", 
+    color: "#fff", 
+    alignSelf: "center", 
+    marginBottom: 16 
   },
-  input: {
-    flex: 1,
-    backgroundColor: "#121318",
+
+  dropdownWrapper: { 
+    zIndex: 1000, 
+    marginBottom: 16 
+  },
+
+  dropdown: {
+    backgroundColor: "#0f1016",
+    borderColor: "#1f2530",
     borderWidth: 1,
-    borderColor: "#1a1b20",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    height: 50,
   },
-  searchButton: {
-    backgroundColor: "#3b82f6",
-    paddingHorizontal: 16,
-    justifyContent: "center",
-    borderRadius: 10,
-    marginLeft: 8,
-  },
-  searchButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  noData: {
-    color: "#fff",
-    fontSize: 16,
-    textAlign: "center",
-  },
-  exerciseCard: {
+
+  dropdownContainer: {
     backgroundColor: "#1a1b20",
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 10,
+    borderColor: "#1f2530",
+    borderWidth: 1,
+    borderRadius: 12,
   },
-  exerciseTitle: {
-    color: "#22c55e",
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 6,
+
+  exerciseCard: { 
+    backgroundColor: "#121318", 
+    borderRadius: 14, 
+    padding: 16, 
+    marginBottom: 16 
   },
-  detailText: {
-    color: "#fff",
-    fontSize: 16,
-    marginLeft: 8,
+
+  exerciseTitle: { 
+    fontSize: 18, 
+    fontWeight: "700", 
+    color: "#fff", 
+    marginBottom: 12 
   },
-  instructions: {
-    color: "#9ca3af",
-    marginTop: 6,
-    fontStyle: "italic",
+
+  detailText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    marginLeft: 4 
   },
-  error: {
-    color: "#ef4444",
-    textAlign: "center",
-    marginBottom: 10,
+
+  instructions: { 
+    color: "#9ca3af", 
+    marginTop: 6, 
+    fontStyle: "italic" 
+  },
+
+  addButton: { 
+    backgroundColor: "#22c55e", 
+    paddingVertical: 10, 
+    borderRadius: 10, 
+    alignItems: "center", 
+    marginTop: 10 
+  },
+
+  addButtonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: "700" 
+  },
+
+  noData: { 
+    color: "#fff", 
+    fontSize: 16, 
+    textAlign: "center" 
+  },
+
+  error: { 
+    color: "#ef4444", 
+    textAlign: "center", 
+    marginBottom: 10 
   },
 });

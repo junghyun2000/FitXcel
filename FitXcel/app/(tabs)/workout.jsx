@@ -313,7 +313,6 @@ export default function WorkoutLog() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 16 }]}
         >
           <Text style={styles.title}>Log Workout</Text>
-
           {/* Dropdown + custom exercise input */}
           <View style={styles.dropdownWrapper}>
             <DropDownPicker
@@ -330,26 +329,26 @@ export default function WorkoutLog() {
               zIndex={1000}
             />
 
-            {/* New input + button for adding custom exercise */}
-            <TextInput
-              style={styles.newExerciseInput}
-              placeholder="Add new exercise..."
-              placeholderTextColor="#9ca3af"
-              value={newExercise}
-              onChangeText={setNewExercise}
-            />
-
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: "#3b82f6" }]}
-              onPress={addNewExercise}
-            >
-              <Text style={styles.addButtonText}>+ Add Custom Exercise</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity style={styles.addButton} onPress={addExercise}>
-              <Text style={styles.addButtonText}>+ Add Exercise to Log</Text>
+              <Text style={styles.addButtonText}>+ Log Exercise</Text>
             </TouchableOpacity>
           </View>
+
+          {/* New input + button for adding custom exercise */}
+          <TextInput
+            style={styles.newExerciseInput}
+            placeholder="Add Custom Exercise"
+            placeholderTextColor="#9ca3af"
+            value={newExercise}
+            onChangeText={setNewExercise}
+          />
+
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: "#3b82f6" }]}
+            onPress={addNewExercise}
+          >
+            <Text style={styles.addButtonText}>+ Add Custom Exercise</Text>
+          </TouchableOpacity>
 
           {/* Render workout cards for each exercise */}
           {Object.keys(workouts)
