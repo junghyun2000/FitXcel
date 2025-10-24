@@ -13,21 +13,20 @@ import { Audio } from "expo-av";
 import * as Haptics from "expo-haptics";
 import { apiGet } from "../utils/api";
 import { useLocalSearchParams } from "expo-router";
-import io from "socket.io-client";
+import { getSocket } from "../utils/socket";
+import { useRouter } from "expo-router";
 
 export default function GameArena() {
   const insets = useSafeAreaInsets();
-
+  const router = useRouter();
   const [player, setPlayer] = useState(null);
   const [enemy, setEnemy] = useState(null);
   const [log, setLog] = useState([]);
   const [winner, setWinner] = useState(null);
   const [energy, setEnergy] = useState(0);
   const [floatTexts, setFloatTexts] = useState([]);
-  // Multiplayer
-  const { mode, roomId } = useLocalSearchParams();
-  const socketRef = useRef(null);
-  // Animations
+  const { mode, roomId, players } = useLocalSearchParams();
+
   const hitAnim = useRef(new Animated.Value(1)).current;
   const enemyHitAnim = useRef(new Animated.Value(1)).current;
   const flashAnim = useRef(new Animated.Value(0)).current;
@@ -35,58 +34,134 @@ export default function GameArena() {
   const enemyFlinchAnim = useRef(new Animated.Value(0)).current;
   const playerBounceAnim = useRef(new Animated.Value(0)).current;
 
-  // Sounds
   const [sounds, setSounds] = useState({});
 
+  // SOCKET HANDLING
   useEffect(() => {
+    const socket = getSocket();
+    console.log("🎮 GameArena mounted, socket id:", socket.id);
+
     loadStats();
     preloadSounds();
-    if (mode === "pvp" && roomId) {
-      socketRef.current = io("https://fitxcel.onrender.com");
 
-      socketRef.current.emit("joinRoom", { roomId, playerData: { stats: player } });
+    // Always listen for attacks immediately
+    socket.off("attackEvent");
+    socket.on("attackEvent", (data) => {
+      console.log("📡 attackEvent received:", data);
+      if (data.from === socket.id) return; // ignore own attack
 
-      socketRef.current.on("attackEvent", (data) => {
-        if (data.from !== socketRef.current.id) {
-          // enemy attack event → apply damage
-          const newHP = Math.max(0, player.hp - data.damage);
-          setPlayer({ ...player, hp: newHP });
-          spawnFloatText(`-${data.damage}`, "#9CA3AF", "player", -30);
-          setLog((p) => [`Opponent hit you for ${data.damage} damage!`, ...p]);
-          if (newHP <= 0) {
-            playSound("lose");
-            setWinner("Enemy wins!");
-            setLog((p) => ["💀 You were defeated!", ...p]);
-          }
+      setPlayer((prev) => {
+        if (!prev) return prev;
+        const newHP = Math.max(0, prev.hp - data.damage);
+        return { ...prev, hp: newHP };
+      });
+
+      spawnFloatText(`-${data.damage}`, "#9CA3AF", "player", -30);
+      setLog((p) => [`Opponent hit you for ${data.damage} damage!`, ...p]);
+      if (player && player.hp - data.damage <= 0) {
+        playSound("lose");
+        setWinner("Enemy wins!");
+        setLog((p) => ["💀 You were defeated!", ...p]);
+      }
+    });
+
+    socket.off("checkVictory");
+    socket.on("checkVictory", () => {
+      setEnemy((prevEnemy) => {
+        if (prevEnemy && prevEnemy.hp <= 0) {
+          playSound("win");
+          playerVictoryPose();
+          setWinner("You win!");
+          setLog((p) => ["🎉 You defeated the enemy!", ...p]);
+        }
+        return prevEnemy;
+      });
+
+      setPlayer((prevPlayer) => {
+        if (prevPlayer && prevPlayer.hp <= 0) {
+          playSound("lose");
+          setWinner("Enemy wins!");
+          setLog((p) => ["💀 You were defeated!", ...p]);
+        }
+        return prevPlayer;
+      });
+    });
+
+    socket.off("battleEnd");
+    socket.on("battleEnd", (data) => {
+      playSound("lose");
+      setWinner("Enemy wins!");
+      setLog((p) => ["🏳️ Opponent forfeited. You win!", ...p]);
+    });
+
+    // --- Handle match setup ---
+    if (mode === "pvp" && roomId && players) {
+      try {
+        const parsed = JSON.parse(players);
+        const me = socket.id;
+        const other = parsed.find((p) => p.id !== me);
+        if (other) {
+          const eStats = other.stats;
+          const enemyHP = eStats.stamina * 100;
+          setEnemy({ ...eStats, hp: enemyHP, maxHp: enemyHP });
+          setLog((p) => ["Opponent connected!", ...p]);
+        }
+      } catch (e) {
+        console.warn("Failed to parse players param:", e);
+      }
+
+      socket.off("matchReady");
+      socket.on("matchReady", (data) => {
+        const { players } = data || {};
+        if (!players) return;
+        const other = players.find((p) => p.id !== socket.id);
+        if (other) {
+          const eStats = other.stats;
+          const enemyHP = eStats.stamina * 100;
+          setEnemy({ ...eStats, hp: enemyHP, maxHp: enemyHP });
+          setLog((p) => ["Opponent connected!", ...p]);
         }
       });
     }
-    return () => unloadSounds();
+
+    // cleanup
+    return () => {
+      socket.off("attackEvent");
+      socket.off("checkVictory");
+      socket.off("matchReady");
+      unloadSounds();
+    };
   }, []);
 
+  // --- LOAD STATS ---
   const loadStats = async () => {
     try {
       const res = await apiGet("/profile");
       const stats = res.stats || { strength: 10, stamina: 10, agility: 10 };
       const playerHP = stats.stamina * 100;
-      const enemyStats = {
-        strength: Math.round(stats.strength * 0.9 + Math.random() * 5),
-        stamina: Math.round(stats.stamina * 0.9 + Math.random() * 5),
-        agility: Math.round(stats.agility * 0.9 + Math.random() * 5),
-      };
-      const enemyHP = enemyStats.stamina * 100;
       setPlayer({ ...stats, hp: playerHP, maxHp: playerHP });
-      setEnemy({ ...enemyStats, hp: enemyHP, maxHp: enemyHP });
       setWinner(null);
       setEnergy(0);
       setLog(["Battle started!"]);
       setFloatTexts([]);
       playerBounceAnim.setValue(0);
+
+      // AI enemy
+      if (mode === "ai") {
+        const enemyStats = {
+          strength: Math.round(stats.strength * 0.9 + Math.random() * 5),
+          stamina: Math.round(stats.stamina * 0.9 + Math.random() * 5),
+          agility: Math.round(stats.agility * 0.9 + Math.random() * 5),
+        };
+        const enemyHP = enemyStats.stamina * 100;
+        setEnemy({ ...enemyStats, hp: enemyHP, maxHp: enemyHP });
+      }
     } catch {
       Alert.alert("Error", "Could not load stats for game");
     }
   };
 
+  // --- SOUND HELPERS ---
   const preloadSounds = async () => {
     try {
       const hit = new Audio.Sound();
@@ -114,6 +189,7 @@ export default function GameArena() {
     } catch {}
   };
 
+  // --- ANIMATIONS ---
   const animateHit = (anim) =>
     Animated.sequence([
       Animated.timing(anim, { toValue: 0.7, duration: 80, useNativeDriver: true }),
@@ -135,50 +211,25 @@ export default function GameArena() {
 
   const enemyFlinch = () =>
     Animated.sequence([
-      Animated.timing(enemyFlinchAnim, {
-        toValue: -15,
-        duration: 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(enemyFlinchAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
+      Animated.timing(enemyFlinchAnim, { toValue: -15, duration: 80, useNativeDriver: true }),
+      Animated.timing(enemyFlinchAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
     ]).start();
 
-  // 🏆 Victory pose
   const playerVictoryPose = () => {
     Animated.sequence([
-      Animated.timing(playerBounceAnim, {
-        toValue: -20,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(playerBounceAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
+      Animated.timing(playerBounceAnim, { toValue: -20, duration: 200, useNativeDriver: true }),
+      Animated.timing(playerBounceAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(playerBounceAnim, {
-            toValue: -10,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(playerBounceAnim, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
+          Animated.timing(playerBounceAnim, { toValue: -10, duration: 400, useNativeDriver: true }),
+          Animated.timing(playerBounceAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
         ])
       ).start();
     });
   };
 
-  // Floating text
+  // --- FLOATING TEXT ---
   const spawnFloatText = (text, color, target, offset = 0) => {
     const id = Math.random().toString();
     const y = new Animated.Value(0);
@@ -195,6 +246,7 @@ export default function GameArena() {
     ]).start(() => setFloatTexts((p) => p.filter((f) => f.id !== id)));
   };
 
+  // --- ATTACK LOGIC ---
   const doAttack = (isSpecial = false) => {
     if (winner || !player || !enemy) return;
 
@@ -204,12 +256,11 @@ export default function GameArena() {
     const dodged = Math.random() * 100 < dodgeChance;
 
     if (dodged) {
-      // MISS text on left of enemy
       spawnFloatText("MISS", "#F87171", "enemy", -30);
       playSound("hit");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       setLog((p) => ["Enemy dodged your attack!", ...p]);
-      enemyAttack();
+      if (mode === "ai") enemyAttack();
       return;
     }
 
@@ -222,13 +273,10 @@ export default function GameArena() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
-    const newHP = Math.max(0, enemy.hp - damage);
-    setEnemy({ ...enemy, hp: newHP });
+    setEnemy((prev) => ({ ...prev, hp: Math.max(0, prev.hp - damage) }));
     animateHit(enemyHitAnim);
     enemyFlinch();
-    // damage number right of enemy
     spawnFloatText(`-${damage}`, isSpecial ? "#EAB308" : "#F87171", "enemy", 30);
-
     setLog((p) => [
       isSpecial ? `💥 SPECIAL HIT! ${damage}` : `You dealt ${damage} damage!`,
       ...p,
@@ -236,21 +284,18 @@ export default function GameArena() {
     if (isSpecial) setEnergy(0);
     else setEnergy((e) => Math.min(100, e + (10 + player.agility / 5)));
 
-    if (newHP <= 0) {
-      playSound("win");
-      playerVictoryPose();
-      setWinner("You win!");
-      setLog((p) => ["🎉 You defeated the enemy!", ...p]);
-    } else {
-      if (mode === "pvp" && roomId && socketRef.current) {
-        socketRef.current.emit("attack", {
-          roomId,
-          from: socketRef.current.id,
-          damage,
-          isSpecial,
-        });
+    const socket = getSocket();
+    if (mode === "pvp" && roomId) {
+      console.log("⚡ Emitting attack:", { id: socket.id, roomId, damage });
+      socket.emit("attack", { roomId, from: socket.id, damage, isSpecial });
+    } else if (mode === "ai") {
+      // AI battle only
+      if (enemy.hp - damage <= 0) {
+        playSound("win");
+        playerVictoryPose();
+        setWinner("You win!");
+        setLog((p) => ["🎉 You defeated the enemy!", ...p]);
       } else {
-        //AI attack
         setTimeout(enemyAttack, 800);
       }
     }
@@ -261,9 +306,7 @@ export default function GameArena() {
     const damage = Math.round(enemy.strength * (0.8 + Math.random() * 0.4));
     const dodgeChance = player.agility * 0.5;
     const dodged = Math.random() * 100 < dodgeChance;
-
     if (dodged) {
-      // MISS text on right of player
       spawnFloatText("MISS", "#F87171", "player", 30);
       setLog((p) => ["You dodged the attack!", ...p]);
       return;
@@ -271,16 +314,14 @@ export default function GameArena() {
 
     playSound("hit");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    const newHP = Math.max(0, player.hp - damage);
-    setPlayer({ ...player, hp: newHP });
+    setPlayer((prev) => ({ ...prev, hp: Math.max(0, prev.hp - damage) }));
     animateHit(hitAnim);
-    // damage number left of player
     spawnFloatText(`-${damage}`, "#9CA3AF", "player", -30);
     setLog((p) => [`Enemy hit you for ${damage} damage!`, ...p]);
-    if (newHP <= 0) {
+    if (player && player.hp - damage <= 0) {
       playSound("lose");
       setWinner("Enemy wins!");
-      setLog((p) => ["💀 You were defeated!", ...p]);
+      setLog((p) => ["You were defeated!", ...p]);
     }
   };
 
@@ -310,6 +351,7 @@ export default function GameArena() {
         </Animated.Text>
       ));
 
+  // --- UI ---
   return (
     <SafeAreaView style={[styles.container, { paddingBottom: insets.bottom + 10 }]}>
       <Text style={styles.title}>⚔️ Battle Arena</Text>
@@ -319,26 +361,13 @@ export default function GameArena() {
             {/* Player */}
             <View style={styles.avatarWrapper}>
               <Animated.View
-                style={[
-                  styles.side,
-                  { transform: [{ scale: hitAnim }, { translateY: playerBounceAnim }] },
-                ]}
+                style={[styles.side, { transform: [{ scale: hitAnim }, { translateY: playerBounceAnim }] }]}
               >
-                <Image
-                  source={require("../assets/images/level1.png")}
-                  style={[styles.avatar, { transform: [{ scaleX: 1 }] }]}
-                />
+                <Image source={require("../assets/images/level1.png")} style={[styles.avatar, { transform: [{ scaleX: 1 }] }]} />
                 <View style={styles.healthContainer}>
-                  <View
-                    style={[
-                      styles.healthFill,
-                      { width: `${healthPercent(player.hp, player.maxHp)}%` },
-                    ]}
-                  />
+                  <View style={[styles.healthFill, { width: `${healthPercent(player.hp, player.maxHp)}%` }]} />
                 </View>
-                <Text style={styles.hpText}>
-                  You: {player.hp}/{player.maxHp}
-                </Text>
+                <Text style={styles.hpText}>You: {player.hp}/{player.maxHp}</Text>
               </Animated.View>
               <View style={styles.floatLeft}>{renderFloatTexts("player")}</View>
             </View>
@@ -355,26 +384,13 @@ export default function GameArena() {
                   source={require("../assets/images/level4.png")}
                   style={[
                     styles.avatar,
-                    {
-                      transform: [
-                        { scaleX: -1 },
-                        { translateX: enemyFlinchAnim },
-                        { scale: enemyHitAnim },
-                      ],
-                    },
+                    { transform: [{ scaleX: -1 }, { translateX: enemyFlinchAnim }, { scale: enemyHitAnim }] },
                   ]}
                 />
                 <View style={styles.healthContainer}>
-                  <View
-                    style={[
-                      styles.healthFillEnemy,
-                      { width: `${healthPercent(enemy.hp, enemy.maxHp)}%` },
-                    ]}
-                  />
+                  <View style={[styles.healthFillEnemy, { width: `${healthPercent(enemy.hp, enemy.maxHp)}%` }]} />
                 </View>
-                <Text style={styles.hpText}>
-                  Enemy: {enemy.hp}/{enemy.maxHp}
-                </Text>
+                <Text style={styles.hpText}>Enemy: {enemy.hp}/{enemy.maxHp}</Text>
               </TouchableOpacity>
               <View style={styles.floatRight}>{renderFloatTexts("enemy")}</View>
             </View>
@@ -388,20 +404,45 @@ export default function GameArena() {
           <Text style={styles.energyText}>Energy: {Math.floor(energy)}%</Text>
 
           {energy >= 100 && !winner && (
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: "#EAB308" }]}
-              onPress={() => doAttack(true)}
-            >
+            <TouchableOpacity style={[styles.btn, { backgroundColor: "#EAB308" }]} onPress={() => doAttack(true)}>
               <Text style={styles.btnText}>⚡ SPECIAL ATTACK ⚡</Text>
             </TouchableOpacity>
           )}
 
+          {!winner && (
+            <TouchableOpacity
+              style={[styles.btn, { backgroundColor: "#EF4444" }]}
+              onPress={() => {
+                const socket = getSocket();
+                if (mode === "pvp" && roomId) {
+                  socket.emit("forfeit", { roomId, from: socket.id });
+                  setWinner("Enemy wins!");
+                  setLog((p) => ["You forfeited the match!", ...p]);
+                } else {
+                  setWinner("Enemy wins!");
+                  setLog((p) => ["You forfeited the battle!", ...p]);
+                }
+                // Return to menu
+                setTimeout(() => router.replace("/arena"), 800);
+              }}
+            >
+              <Text style={styles.btnText}>Forfeit / Back</Text>
+            </TouchableOpacity>
+            
+          )}
           {winner && (
             <TouchableOpacity
               style={[styles.btn, { backgroundColor: "#22C55E" }]}
-              onPress={() => loadStats()}
+              onPress={() => {
+                // For finished games, always return to arena
+                const socket = getSocket();
+                if (mode === "pvp" && roomId) {
+                  socket.emit("leaveRoom", { roomId, from: socket.id });
+                }
+                router.replace("/arena");
+              }}
             >
-              <Text style={styles.btnText}>Play Again</Text>
+              <Text style={styles.btnText}>⬅️ Back to Arena</Text>
             </TouchableOpacity>
           )}
 
@@ -423,78 +464,24 @@ export default function GameArena() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0B1220", padding: 16 },
   title: { color: "#4FC3F7", fontSize: 22, fontWeight: "700", marginBottom: 10 },
-  battleArea: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginVertical: 20,
-  },
+  battleArea: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 20 },
   avatarWrapper: { flex: 1, alignItems: "center", position: "relative" },
-  floatLeft: {
-    position: "absolute",
-    top: 10,
-    left: "22%", // closer to avatar
-    alignItems: "flex-start",
-  },
-  floatRight: {
-    position: "absolute",
-    top: 10,
-    right: "22%", // closer to avatar
-    alignItems: "flex-end",
-  },
-  floatText: {
-    fontSize: 22,
-    fontWeight: "900",
-    textShadowColor: "#000",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
+  floatLeft: { position: "absolute", top: 10, left: "22%", alignItems: "flex-start" },
+  floatRight: { position: "absolute", top: 10, right: "22%", alignItems: "flex-end" },
+  floatText: { fontSize: 22, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
   side: { alignItems: "center" },
   avatar: { width: 140, height: 140, resizeMode: "contain" },
-  healthContainer: {
-    width: "70%",
-    height: 10,
-    backgroundColor: "#1E293B",
-    borderRadius: 5,
-    overflow: "hidden",
-    marginTop: 6,
-  },
+  healthContainer: { width: "70%", height: 10, backgroundColor: "#1E293B", borderRadius: 5, overflow: "hidden", marginTop: 6 },
   healthFill: { height: "100%", backgroundColor: "#22C55E" },
   healthFillEnemy: { height: "100%", backgroundColor: "#EF4444" },
   hpText: { color: "#E5E7EB", marginTop: 4, fontSize: 14 },
-  energyContainer: {
-    width: "100%",
-    height: 10,
-    backgroundColor: "#1E293B",
-    borderRadius: 5,
-    overflow: "hidden",
-    marginBottom: 6,
-  },
+  energyContainer: { width: "100%", height: 10, backgroundColor: "#1E293B", borderRadius: 5, overflow: "hidden", marginBottom: 6 },
   energyFill: { height: "100%", backgroundColor: "#EAB308" },
   energyText: { color: "#FACC15", textAlign: "center", marginBottom: 8 },
-  btn: {
-    marginTop: 10,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
+  btn: { marginTop: 10, borderRadius: 10, paddingVertical: 12, alignItems: "center" },
   btnText: { color: "#121212", fontWeight: "bold", fontSize: 16 },
-  flash: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#FDE68A",
-    opacity: 0,
-  },
-  logBox: {
-    backgroundColor: "#0F172A",
-    borderRadius: 12,
-    padding: 10,
-    marginTop: 12,
-    maxHeight: 150,
-  },
+  flash: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#FDE68A", opacity: 0 },
+  logBox: { backgroundColor: "#0F172A", borderRadius: 12, padding: 10, marginTop: 12, maxHeight: 150 },
   logText: { color: "#94A3B8", fontSize: 14, marginBottom: 4 },
   loading: { color: "#94A3B8", textAlign: "center", marginTop: 40 },
 });

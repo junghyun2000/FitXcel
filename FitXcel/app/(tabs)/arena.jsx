@@ -4,12 +4,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import io from "socket.io-client";
 import { apiGet } from "../../utils/api";
+import { getSocket } from "../../utils/socket";
 
-const SOCKET_URL = "https://fitxcel.onrender.com"; // your backend URL
+const SOCKET_URL = "http://localhost:4000"; // your backend URL
 
 export default function GameArenaJoin() {
   const router = useRouter();
-  const socketRef = useRef(null);
   const [stats, setStats] = useState(null);
   const [roomCode, setRoomCode] = useState("");
   const [status, setStatus] = useState("");
@@ -27,56 +27,69 @@ export default function GameArenaJoin() {
 
   const startAIBattle = () => {
     router.push({
-      pathname: "/gamearena",
+      pathname: "../gamearena",
       params: { mode: "ai" },
     });
   };
 
   const createRoom = () => {
     if (!stats) return Alert.alert("Please wait for stats to load.");
-    socketRef.current = io(SOCKET_URL);
 
-    socketRef.current.emit("createRoom", { stats });
-    socketRef.current.on("roomCreated", ({ roomId }) => {
+    const socket = getSocket(); // ✅ persistent socket instance
+
+    // Wait for connection before emitting
+    if (!socket.connected) {
+      socket.connect();
+    }
+    console.log("✅ Connected to socket:", socket.id);
+    socket.emit("createRoom", { stats });
+
+    socket.on("roomCreated", ({ roomId }) => {
       setRoomCode(roomId);
       setStatus(`Room ${roomId} created. Waiting for your friend...`);
       Alert.alert("Room Created", `Share this code with your friend: ${roomId}`);
     });
 
-    socketRef.current.on("matchFound", ({ roomId }) => {
-      socketRef.current.disconnect();
+    socket.off("matchReady");
+    socket.on("matchReady", ({ roomId, players }) => {
+      console.log("✅ Match ready, navigating to battle:", roomId);
       router.push({
         pathname: "/gamearena",
-        params: { mode: "pvp", roomId },
+        params: { mode: "pvp", roomId, players: JSON.stringify(players)},
       });
     });
+
+    socket.off("errorMsg");
+    socket.on("errorMsg", (msg) => Alert.alert("Error", msg));
   };
 
   const joinRoom = () => {
-    if (!stats) return Alert.alert("Please wait for stats to load.");
-    if (!roomCode.trim()) return Alert.alert("Enter a valid room code.");
-    socketRef.current = io(SOCKET_URL);
+    if (!roomCode.trim()) return Alert.alert("Enter a room code first!");
 
-    socketRef.current.emit("joinRoom", {
-      roomId: roomCode.trim().toUpperCase(),
-      playerData: { stats },
-    });
-
-    socketRef.current.on("matchFound", ({ roomId }) => {
-      socketRef.current.disconnect();
-      router.push({
-        pathname: "/gamearena",
-        params: { mode: "pvp", roomId },
+    const socket = getSocket();
+    socket.on("connect", () => {
+      console.log("✅ Connected to socket:", socket.id);
+      socket.emit("joinRoom", {
+        roomId: roomCode.trim().toUpperCase(),
+        playerData: { stats },
       });
     });
 
-    socketRef.current.on("errorMsg", (msg) => Alert.alert("Error", msg));
+    socket.on("matchReady", ({ roomId, players }) => {
+      console.log("✅ Match ready, navigating to battle:", roomId);
+      router.push({
+        pathname: "/gamearena",
+        params: { mode: "pvp", roomId ,players: JSON.stringify(players), },
+      });
+    });
+
+    socket.on("errorMsg", (msg) => Alert.alert("Error", msg));
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>⚔️ Game Arena</Text>
-      <Text style={styles.subtitle}>Choose your battle mode</Text>
+      <Text style={styles.title}>Game Arena</Text>
+      <Text style={styles.subtitle}>Choose battle mode</Text>
 
       <TouchableOpacity style={[styles.btn, { backgroundColor: "#22C55E" }]} onPress={startAIBattle}>
         <Text style={styles.btnText}>Battle AI</Text>
