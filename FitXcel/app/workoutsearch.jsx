@@ -4,7 +4,7 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import { Dropdown } from "react-native-element-dropdown";
 
-export default function ExerciseSearch() {
+export default function WorkoutSearch() {
   const [selectedMuscle, setSelectedMuscle] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -32,13 +32,14 @@ export default function ExerciseSearch() {
     "triceps",
   ].map((m) => ({ label: m.replace("_", " ").toUpperCase(), value: m }));
 
+
   const fetchExercises = async (muscle) => {
     if (!muscle) return;
 
     setLoading(true);
     setError("");
     setExercises([]);
-
+   
     try {
       const response = await axios.get(
         `https://api.api-ninjas.com/v1/exercises?muscle=${muscle}`,
@@ -140,9 +141,9 @@ export default function ExerciseSearch() {
 
 // Styles
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 16 
+  container: {
+    flex: 1,
+    padding: 16
   },
 
   header: {
@@ -162,30 +163,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
-  backButtonText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    fontWeight: "600" 
+  backButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600"
   },
 
-  headerTitle: { 
-    color: "#fff", 
-    fontSize: 22, 
-    fontWeight: "700", 
-    marginLeft: 16 
+  headerTitle: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "700",
+    marginLeft: 16
   },
 
-  title: { 
-    fontSize: 22, 
-    fontWeight: "800", 
-    color: "#fff", 
-    alignSelf: "center", 
-    marginBottom: 16 
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#fff",
+    alignSelf: "center",
+    marginBottom: 16
   },
 
-  dropdownWrapper: { 
-    zIndex: 1000, 
-    marginBottom: 16 
+  dropdownWrapper: {
+    zIndex: 1000,
+    marginBottom: 16
   },
 
   dropdown: {
@@ -204,55 +205,55 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
 
-  exerciseCard: { 
-    backgroundColor: "#121318", 
-    borderRadius: 14, 
-    padding: 16, 
-    marginBottom: 16 
+  exerciseCard: {
+    backgroundColor: "#121318",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16
   },
 
-  exerciseTitle: { 
-    fontSize: 18, 
-    fontWeight: "700", 
-    color: "#fff", 
-    marginBottom: 12 
+  exerciseTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 12
   },
 
-  detailText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    marginLeft: 4 
+  detailText: {
+    color: "#fff",
+    fontSize: 16,
+    marginLeft: 4
   },
 
-  instructions: { 
-    color: "#9ca3af", 
-    marginTop: 6, 
-    fontStyle: "italic" 
+  instructions: {
+    color: "#9ca3af",
+    marginTop: 6,
+    fontStyle: "italic"
   },
 
-  addButton: { 
-    backgroundColor: "#22c55e", 
-    paddingVertical: 10, 
-    borderRadius: 10, 
-    alignItems: "center", 
-    marginTop: 10 
+  addButton: {
+    backgroundColor: "#22c55e",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 10
   },
 
-  addButtonText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    fontWeight: "700" 
+  addButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700"
   },
 
-  noData: { 
-    color: "#fff", 
-    fontSize: 16, 
-    textAlign: "center" 
+  noData: {
+    color: "#fff",
+    fontSize: 16,
+    textAlign: "center"
   },
 
-  error: { 
-    color: "#ef4444", 
-    textAlign: "center", 
-    marginBottom: 10 
+  error: {
+    color: "#ef4444",
+    textAlign: "center",
+    marginBottom: 10
   },
 });
