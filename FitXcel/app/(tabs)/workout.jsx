@@ -15,20 +15,23 @@ import {
 import DropDownPicker from "react-native-dropdown-picker";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
-import { apiGet, apiPost, BASE_URL } from "../../utils/api";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { apiGet, apiPost, BASE_URL } from '../../utils/api';
 
 const exampleExercises = ["Bench Press", "Squats", "Deadlift"];
 
 export default function WorkoutLog() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const insets = useSafeAreaInsets(); // for safe area padding
+  const router = useRouter(); // navigation
+  const { selectedExercise } = useLocalSearchParams();
 
-  const [open, setOpen] = useState(false);
-  const [exercise, setExercise] = useState(exampleExercises[0]);
-  const [items, setItems] = useState(
-    exampleExercises.map((ex) => ({ label: ex, value: ex }))
-  );
+  // Dropdown state
+  const [open, setOpen] = useState(false); // controls dropdown open/close
+  const [exercise, setExercise] = useState(exampleExercises[0]); // selected exercise
+  const [items, setItems] = useState([]);
+
+
+  // Input state for custom exercises
   const [newExercise, setNewExercise] = useState("");
   const [workouts, setWorkouts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -47,6 +50,22 @@ export default function WorkoutLog() {
     loadExercises();
   }, []);
 
+  useEffect(() => {
+    const loadDropdownItems = async () => {
+      try {
+        const stored = await AsyncStorage.getItem("exerciseDropdownItems");
+        if (stored) {
+          setItems(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.error("Error loading saved dropdown:", error);
+      }
+    };
+
+    loadDropdownItems();
+  }, []);
+
+  // Fetch workouts from backend when component mounts
   useEffect(() => {
     async function fetchWorkouts() {
       try {
@@ -85,7 +104,52 @@ export default function WorkoutLog() {
     }
 
     fetchWorkouts();
-  }, []);
+  }, []); // runs once when component mounts
+
+  useEffect(() => {
+    const saveExerciseToStorage = async (exerciseName) => {
+      try {
+        // Get the currently saved list
+        const stored = await AsyncStorage.getItem("exerciseDropdownItems");
+        let existing = stored ? JSON.parse(stored) : [];
+
+        // Check if it's already there
+        const alreadyExists = existing.some(
+          (item) => item.value.toLowerCase() === exerciseName.toLowerCase()
+        );
+
+        if (!alreadyExists) {
+          // Add new exercise and save merged list
+          const newItem = { label: exerciseName, value: exerciseName };
+          const updated = [...existing, newItem];
+          await AsyncStorage.setItem("exerciseDropdownItems", JSON.stringify(updated));
+          setItems(updated); // Update dropdown in state too
+          Alert.alert("Exercise Added", `${exerciseName} has been added to your exercise list.`);
+        } else {
+          // If it already exists, just ensure it’s in the current dropdown
+          setItems(existing);
+        }
+      } catch (error) {
+        console.error("Error saving exercise dropdown:", error);
+      }
+    };
+
+    if (selectedExercise) {
+      // Save + merge in storage
+      saveExerciseToStorage(selectedExercise);
+
+      // Select the exercise
+      setExercise(selectedExercise);
+
+      // Add to workouts if needed
+      setWorkouts((prev) => ({
+        ...prev,
+        [selectedExercise]:
+          prev[selectedExercise] || [{ id: 1, weight: "", reps: "" }],
+      }));
+    }
+  }, [selectedExercise]);
+
 
   const addExercise = () => {
     if (!workouts[exercise]) {
@@ -231,7 +295,7 @@ export default function WorkoutLog() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.title}>Log Workout</Text>
-
+          {/* Dropdown + custom exercise input */}
           <View style={styles.dropdownWrapper}>
             <DropDownPicker
               open={open}
@@ -247,26 +311,28 @@ export default function WorkoutLog() {
               zIndex={1000}
             />
 
-            <TextInput
-              style={styles.newExerciseInput}
-              placeholder="Add new exercise..."
-              placeholderTextColor="#9ca3af"
-              value={newExercise}
-              onChangeText={setNewExercise}
-            />
-
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: "#3b82f6" }]}
-              onPress={addNewExercise}
-            >
-              <Text style={styles.addButtonText}>+ Add Custom Exercise</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity style={styles.addButton} onPress={addExercise}>
-              <Text style={styles.addButtonText}>+ Add Exercise to Log</Text>
+              <Text style={styles.addButtonText}>+ Log Exercise</Text>
             </TouchableOpacity>
           </View>
 
+          {/* New input + button for adding custom exercise */}
+          <TextInput
+            style={styles.newExerciseInput}
+            placeholder="Add Custom Exercise"
+            placeholderTextColor="#9ca3af"
+            value={newExercise}
+            onChangeText={setNewExercise}
+          />
+
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: "#3b82f6" }]}
+            onPress={addNewExercise}
+          >
+            <Text style={styles.addButtonText}>+ Add Custom Exercise</Text>
+          </TouchableOpacity>
+
+          {/* Render workout cards for each exercise */}
           {Object.keys(workouts)
             .filter((exName) => workouts[exName]?.length > 0)
             .map((exName) => {
@@ -327,8 +393,12 @@ export default function WorkoutLog() {
               );
             })}
 
-          <TouchableOpacity style={styles.finishButton} onPress={finishWorkout}>
-            <Text style={styles.finishButtonText}>Finish Workout</Text>
+          {/* Navigate to search screen */}
+          <TouchableOpacity
+            style={[styles.finishButton, { backgroundColor: "#3b82f6" }]}
+            onPress={() => router.push("/workoutsearch")}
+          >
+            <Text style={styles.finishButtonText}>Search Exercises</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -337,6 +407,12 @@ export default function WorkoutLog() {
           >
             <Text style={styles.finishButtonText}>See Workout History</Text>
           </TouchableOpacity>
+
+          {/* Save workout button */}
+          <TouchableOpacity style={styles.finishButton} onPress={finishWorkout}>
+            <Text style={styles.finishButtonText}>Finish Workout</Text>
+          </TouchableOpacity>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
