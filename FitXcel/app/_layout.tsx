@@ -8,7 +8,16 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 // Set of routes that do not require authentication
-const AUTH_ROUTES = new Set(['LoginScreen', 'RegisterScreen']);
+const AUTH_ROUTES = new Set([
+  'LoginScreen',
+  'RegisterScreen',
+  'ForgotPassword',
+  'ResetPassword',
+  'login',
+  'register',
+  'forgot-password',
+  'reset-password'
+]);
 
 export default function RootLayout() {
   // State to track if async storage check is complete
@@ -41,7 +50,10 @@ export default function RootLayout() {
   if (!ready) return null;
 
   // Remove leading slash from pathname for comparison
-  const currentRoute = (pathname ?? '').replace(/^\//, '');
+   const currentRoute = (pathname ?? '')
+  .replace(/^\/|\/$/g, '') // remove leading & trailing slashes
+  .toLowerCase();           // normalize for consistent comparison
+
 
   // Redirect unauthenticated users to LoginScreen
   if (!isAuthed && !AUTH_ROUTES.has(currentRoute)) {
@@ -75,6 +87,9 @@ export default function RootLayout() {
         {/* Authentication screens */}
         <Stack.Screen name="LoginScreen" />
         <Stack.Screen name="RegisterScreen" />
+        {/* Password Reset Flow */}
+        <Stack.Screen name="ForgotPassword" />
+        <Stack.Screen name="ResetPassword" />
       </Stack>
     </ThemeProvider>
   );
