@@ -127,43 +127,73 @@ router.post('/forgot-password', async (req, res) => {
     const base = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT||4000}/reset`;
     const resetLink = `${base}?token=${rawToken}`;
 
-    // ---- Email delivery (prefer SendGrid Web API, fallback to SMTP, else dev log) ----
-const sender = process.env.SMTP_FROM || 'FitXcel <no-reply@example.com>';
-const sgKey  = process.env.SENDGRID_API_KEY;
+    // ---- Email delivery (SendGrid first) ----
+    const sender = (process.env.SMTP_FROM || 'FitXcel <no-reply@example.com>').trim();
+    const sgKey  = (process.env.SENDGRID_API_KEY || '').trim();
 
-async function sendResetEmail_viaSendGrid(to, html) {
-  const sgMail = require('@sendgrid/mail');
-  sgMail.setApiKey(sgKey);
-  await sgMail.send({ to, from: sender, subject: 'Reset your FitXcel password', html });
-}
+    async function sendResetEmail_viaSendGrid(to, html) {
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey(sgKey);
+      try {
+      const [resp] = await sgMail.send({
+      to,
+      from: sender, // must be a verified sender in SendGrid
+      subject: 'Reset your FitXcel password',
+      html,
+    });
+      console.log('SendGrid accepted:', resp.statusCode);
+  } catch (e) {
+    // show the real SendGrid error in Render logs
+    const body = e?.response?.body;
+    console.error('SendGrid error:', body || e.message || e);
+    throw e;
+    }
+  }
 
-async function sendResetEmail_viaSMTP(to, html) {
+  async function sendResetEmail_viaSMTP(to, html) {
   const nodemailer = require('nodemailer');
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === 'true', // false for 587 (STARTTLS)
+    secure: process.env.SMTP_SECURE === 'true',
     auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     } : undefined,
-    // These options often help on PaaS networks
     requireTLS: true,
     tls: { minVersion: 'TLSv1.2' },
-    family: 4,           // prefer IPv4 to avoid IPv6 routing issues
+    family: 4,
     connectionTimeout: 15000,
     greetingTimeout: 10000,
     socketTimeout: 20000,
   });
 
   await transporter.verify();
-  await transporter.sendMail({
-    from: sender,
-    to,
-    subject: 'Reset your FitXcel password',
-    html,
-  });
+  await transporter.sendMail({ from: sender, to, subject: 'Reset your FitXcel password', html });
 }
+
+// dev log so you can test even if email fails
+if (process.env.NODE_ENV !== 'production') {
+  console.log('[DEV] resetLink ->', resetLink);
+}
+
+if (user) {
+  try {
+    if (sgKey) {
+      await sendResetEmail_viaSendGrid(email, html);
+      console.log('Email sent via SendGrid Web API');
+    } else if (process.env.SMTP_HOST) {
+      await sendResetEmail_viaSMTP(email, html);
+      console.log('Email sent via SMTP');
+    } else {
+      console.log('[DEV] No email provider configured. Reset link:', resetLink);
+    }
+  } catch (mailErr) {
+    // we already logged the detailed error above
+    console.log(`[DEV] Password reset link for ${email}: ${resetLink}`);
+  }
+}
+
 
 const html = `
   <div style="font-family: Arial, sans-serif; line-height:1.6;">
