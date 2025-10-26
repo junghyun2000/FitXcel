@@ -4,7 +4,6 @@ const connectDB = require('../db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 
 // tiny guard helper (kept same style)
 function must(val, name) {
@@ -118,8 +117,45 @@ router.post('/forgot-password', async (req, res) => {
     const base = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT||4000}/reset`;
     const resetLink = `${base}?token=${rawToken}`;
 
-    // --- Send the email (SMTP by default; SendGrid SDK only if SENDGRID_API_KEY present) ---
-    const html = `
+    // ---- Email delivery (prefer SendGrid Web API, fallback to SMTP, else dev log) ----
+const sender = process.env.SMTP_FROM || 'FitXcel <no-reply@example.com>';
+const sgKey  = process.env.SENDGRID_API_KEY;
+
+async function sendResetEmail_viaSendGrid(to, html) {
+  const sgMail = require('@sendgrid/mail');
+  sgMail.setApiKey(sgKey);
+  await sgMail.send({ to, from: sender, subject: 'Reset your FitXcel password', html });
+}
+
+async function sendResetEmail_viaSMTP(to, html) {
+  const nodemailer = require('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === 'true', // false for 587 (STARTTLS)
+    auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    } : undefined,
+    // These options often help on PaaS networks
+    requireTLS: true,
+    tls: { minVersion: 'TLSv1.2' },
+    family: 4,           // prefer IPv4 to avoid IPv6 routing issues
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+  });
+
+  await transporter.verify();
+  await transporter.sendMail({
+    from: sender,
+    to,
+    subject: 'Reset your FitXcel password',
+    html,
+  });
+}
+
+const html = `
   <div style="font-family: Arial, sans-serif; line-height:1.6;">
     <h2>FitXcel Password Reset</h2>
     <p>You requested to reset your password.</p>
@@ -131,63 +167,35 @@ router.post('/forgot-password', async (req, res) => {
         Reset Password
       </a>
     </p>
-    <p>If that doesn't work, copy and paste this link into your browser:</p>
-    <p><a href="${resetLink}" target="_blank">${resetLink}</a></p>
+    <p>If that doesn't work, copy and paste this link into your browser:<br/>
+      <a href="${resetLink}" target="_blank">${resetLink}</a>
+    </p>
   </div>
 `;
 
-async function sendMailSMTP() {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,                     // e.g. smtp.sendgrid.net
-    port: Number(process.env.SMTP_PORT || 587),      // 587
-    secure: String(process.env.SMTP_SECURE).toLowerCase() === 'true', // false
-    auth: {
-      user: process.env.SMTP_USER,                   // "apikey" (for SendGrid SMTP)
-      pass: process.env.SMTP_PASS,                   // your SG key (starts with SG.)
-    },
-  });
-
-  const from = process.env.SMTP_FROM;                // "FitXcel Support <noreplyfitxcel@gmail.com>"
-  return transporter.sendMail({
-    from,
-    to: email,
-    subject: 'Reset your FitXcel password',
-    html,
-  });
-}
-
-async function sendMail() {
-  // If you later add SENDGRID_API_KEY, this block will use the SDK,
-  // otherwise we fall back to SMTP and never require('@sendgrid/mail').
-  if (process.env.SENDGRID_API_KEY) {
-    const sg = require('@sendgrid/mail');
-    sg.setApiKey(process.env.SENDGRID_API_KEY);
-    const from = process.env.SMTP_FROM;
-    return sg.send({ to: email, from, subject: 'Reset your FitXcel password', html });
-  }
-  return sendMailSMTP();
-}
-
 if (user) {
   try {
-    await sendMail();
-    console.log('Reset email queued successfully');
+    if (sgKey) {
+      await sendResetEmail_viaSendGrid(email, html);
+      console.log('Email sent via SendGrid Web API');
+    } else if (process.env.SMTP_HOST) {
+      await sendResetEmail_viaSMTP(email, html);
+      console.log('Email sent via SMTP');
+    } else {
+      console.log('[DEV] No email provider configured. Reset link:', resetLink);
+    }
   } catch (mailErr) {
     console.error('Email send failed:', mailErr.message);
     console.log(`[DEV] Password reset link for ${email}: ${resetLink}`);
   }
 } else {
-  // Don’t leak user existence; but keep a dev log
-  console.log(`[DEV] Password reset link for ${email}: ${resetLink}`);
+  // Do nothing; still return generic OK
 }
 
     const payload = {
       ok: true,
       message: "If that email exists, a reset link has been sent.",
     };
-    if (process.env.NODE_ENV !== "production") {
-      payload.devLink = resetLink; // show in dev console
-    }
     return res.json(payload);
   } catch (err) {
     console.error("POST /auth/forgot-password error:", err);
