@@ -196,6 +196,9 @@ if (user) {
       ok: true,
       message: "If that email exists, a reset link has been sent.",
     };
+    if (process.env.NODE_ENV !== "production") {
+    payload.devLink = resetLink; // <-- remove this
+  }
     return res.json(payload);
   } catch (err) {
     console.error("POST /auth/forgot-password error:", err);
