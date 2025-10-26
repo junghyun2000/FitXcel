@@ -18,23 +18,32 @@ router.post('/register', async (req, res) => {
     const users = db.collection('users');
 
     const { email, password } = req.body || {};
-    if (!email || !password) {
+    const emailLower = String(email || '').trim().toLowerCase();
+    if (!emailLower || !password) {
       return res.status(400).json({ error: 'email and password are required' });
     }
 
-    await users.createIndex({ email: 1 }, { unique: true });
-
-    const existing = await users.findOne({ email });
+    const existing = await users.findOne({ emailLower });
     if (existing) {
-      return res.status(400).json({ error: 'Email already exists' });
+      return res.status(409).json({ error: 'Email already in use' });
     }
+    const hashed = await bcrypt.hash(password, 10);
 
-    const hash = await bcrypt.hash(password, 10);
-    await users.insertOne({
-      email,
-      password: hash,
-      createdAt: new Date()
-    });
+    try {
+       await users.insertOne({
+        email,                
+        emailLower,           
+        password: hashed,
+         createdAt: new Date()
+       });
+     } catch (e) {
+       if (e && e.code === 11000) {
+         return res.status(409).json({ error: 'Email already in use' });
+       }
+       throw e;
+     }
+
+    
 
     return res.json({ success: true });
   } catch (err) {
@@ -51,11 +60,12 @@ router.post('/login', async (req, res) => {
     const users = db.collection('users');
 
     const { email, password } = req.body || {};
-    if (!email || !password) {
+    const emailLower = String(email || '').trim().toLowerCase();
+    if (!emailLower || !password) {
       return res.status(400).json({ error: 'email and password are required' });
     }
 
-    const user = await users.findOne({ email });
+    const user = await users.findOne({ emailLower });
     if (!user) return res.status(400).json({ error: 'Invalid credentials' });
 
     const ok = await bcrypt.compare(password, user.password);
@@ -82,11 +92,12 @@ router.post('/login', async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body || {};
-    if (!email) return res.status(400).json({ error: 'email is required' });
+    const emailLower = String(email || '').trim().toLowerCase();
+    if (!emailLower) return res.status(400).json({ error: 'email is required' });
 
     const db = await connectDB();
     const users = db.collection('users');
-    const user = await users.findOne({ email });
+    const user = await users.findOne({ emailLower });
 
     const tokenBytes = Number(process.env.RESET_TOKEN_BYTES || 32);
     const rawToken = crypto.randomBytes(tokenBytes).toString('hex');
@@ -110,7 +121,6 @@ router.post('/forgot-password', async (req, res) => {
         }
       );
 
-      await users.createIndex({ 'passwordReset.tokenHash': 1 });
     }
 
     // Build web-based reset link
@@ -196,9 +206,6 @@ if (user) {
       ok: true,
       message: "If that email exists, a reset link has been sent.",
     };
-    if (process.env.NODE_ENV !== "production") {
-    payload.devLink = resetLink; // <-- remove this
-  }
     return res.json(payload);
   } catch (err) {
     console.error("POST /auth/forgot-password error:", err);

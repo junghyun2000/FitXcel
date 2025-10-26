@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const connectDB = require('./db');
 
 const app = express();
 app.use(cors());
@@ -117,6 +118,8 @@ app.get('/reset', (req, res) => {
 </html>`);
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-console.log('BOOT:', { cwd: process.cwd(), file: __filename, nodeEnv: process.env.NODE_ENV });
+(async () => {
+  await connectDB();                 
+  const port = process.env.PORT || 4000;
+  app.listen(port, () => console.log(`Server running on port ${port}`));
+})();
