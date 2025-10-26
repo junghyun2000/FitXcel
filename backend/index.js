@@ -118,11 +118,6 @@ app.get('/reset', (req, res) => {
 </html>`);
 });
 
-(async () => {
-  await connectDB();                 
-  const port = process.env.PORT || 4000;
-  app.listen(port, () => console.log(`Server running on port ${port}`));
-})();
 // MULTIPLAYER SOCKET.IO SETUP
 
 const http = require("http");
@@ -190,6 +185,11 @@ io.on("connection", (socket) => {
   });
 });
 
-
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => console.log(`Server running with sockets on port ${PORT}`));
+// ── Start once: connect DB, then listen on the HTTP server ───────────
+(async () => {
+  await connectDB();
+  const PORT = process.env.PORT || 4000;
+  server.listen(PORT, () => {
+    console.log(`Server running with sockets on port ${PORT}`);
+  });
+})();
