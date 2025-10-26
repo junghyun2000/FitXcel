@@ -79,6 +79,11 @@ export default function LoginScreen() {
       <TouchableOpacity onPress={() => router.replace("/RegisterScreen")}>
         <Text style={styles.link}>Do not have an account? Register</Text>
       </TouchableOpacity>
+    
+      {/* Forgot password link */}
+      <TouchableOpacity onPress={() => router.replace("/ForgotPassword")}>
+        <Text style={styles.link}>Forgot password?</Text>
+      </TouchableOpacity>
     </View>
   );
 }
