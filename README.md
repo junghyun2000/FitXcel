@@ -32,6 +32,7 @@ Backend:
 - BMI Calculator for body mass index computation.
 - BMI History Log Page to track BMI changes over time.
 - Calorie Gauge that resets daily to monitor calorie intake.
+- Calorie History Page to review past calorie logs.
 - Quick Add & Full Calorie Entry for logging meals.
 - Saved Meals Page for viewing and reusing previous meal entries.
 - PvP Game Feature allowing users to compete with special attacks.
