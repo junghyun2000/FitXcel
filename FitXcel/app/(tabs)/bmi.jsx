@@ -37,22 +37,8 @@ export default function BmiInputScreen() {
       }}
       edges={["top", "bottom"]}
     >
-      {/* Top bar with a BIG visible History button */}
-      <View style={{ padding: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ color: "#fff", fontSize: 20, fontWeight: "900" }}>BMI</Text>
-        <TouchableOpacity
-          onPress={() => router.push("/bmi-history")}
-          style={{
-            paddingVertical: 10,
-            paddingHorizontal: 14,
-            borderRadius: 12,
-            backgroundColor: "#111827",
-            borderWidth: 2,
-            borderColor: "#22c55e",
-          }}
-        >
-          <Text style={{ color: "#22c55e", fontWeight: "900" }}>History</Text>
-        </TouchableOpacity>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>BMI Analysis</Text>
       </View>
 
       <ScrollView
@@ -61,7 +47,7 @@ export default function BmiInputScreen() {
           { paddingBottom: insets.bottom + 16 },
         ]}
       >
-        <Text style={styles.title}>Enter Your Details</Text>
+        <Text style={styles.subtitle}>Enter your details to get an instant analysis.</Text>
 
         {/* Gender pills */}
         <View style={styles.pillGroup}>
@@ -119,19 +105,15 @@ export default function BmiInputScreen() {
         </View>
 
         {/* Actions */}
-        <View style={{ marginTop: 12 }}>
+        <View style={styles.actions}>
+          <TouchableOpacity onPress={onCompute} style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>Compute</Text>
+          </TouchableOpacity>
           <TouchableOpacity
-            onPress={onCompute}
-            style={{
-              backgroundColor: "#22c55e",
-              paddingVertical: 12,
-              borderRadius: 12,
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: "#14532d",
-            }}
+            onPress={() => router.push("/bmi-history")}
+            style={styles.secondaryButton}
           >
-            <Text style={{ color: "#06210f", fontWeight: "800" }}>Compute</Text>
+            <Text style={styles.secondaryButtonText}>History</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -141,12 +123,19 @@ export default function BmiInputScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: { padding: 16, gap: 12 },
-  title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#fff",
-    alignSelf: "center",
-    marginTop: 4,
+  header: {
+    padding: 16,
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1f2530",
+    backgroundColor: "#0b0b0c",
+  },
+  headerTitle: { color: "#fff", fontSize: 24, fontWeight: "900" },
+  subtitle: {
+    color: "#9ca3af",
+    textAlign: "center",
+    fontSize: 14,
+    marginBottom: 4,
   },
   pillGroup: {
     flexDirection: "row",
@@ -197,4 +186,23 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.select({ ios: 6, android: 2 }),
   },
   unit: { color: "#9ca3af", marginLeft: 6, flexShrink: 0 },
+  actions: { marginTop: 18, gap: 10 },
+  primaryButton: {
+    backgroundColor: "#22c55e",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#14532d",
+  },
+  primaryButtonText: { color: "#06210f", fontWeight: "800" },
+  secondaryButton: {
+    backgroundColor: "#111827",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#1f2530",
+  },
+  secondaryButtonText: { color: "#22c55e", fontWeight: "800" },
 });
