@@ -34,6 +34,11 @@ Backend:
 - Calorie Gauge that resets daily to monitor calorie intake.
 - Quick Add & Full Calorie Entry for logging meals.
 - Saved Meals Page for viewing and reusing previous meal entries.
+- PvP Game Feature allowing users to compete with special attacks.
+- Create or Join Room for multiplayer interactions.
+- Forfeit Option enabling users to gracefully exit PvP matches.
+- Reward System to incentivise progress and victories.
+
 
 
 ## Installation & Setup
@@ -46,6 +51,7 @@ git clone https://github.com/junghyun2000/FitXcel.git
 
 ### 2. Install Dependencies
 #### Frontend
+In the terminal, run:
 ```
 cd FitXcel
 ```
@@ -53,6 +59,7 @@ cd FitXcel
 npm install
 ```
 #### Backend
+In a new terminal, run:
 ```
 cd backend
 ```
@@ -87,7 +94,8 @@ Physical device using the Expo Go app
 
 ### 4. Reset password feature
 
-The SENDGRID API key must be added to the .env file in the backend folder (You can find the SENDGRID API key in the "GITHUB - SENDGRID API KEY" card in the sprint 2 documentation column).
+- The SENDGRID API key must be added to the .env file in the backend folder
+- You can find the SENDGRID API key in the "GITHUB - SENDGRID API KEY" card in the sprint 2 documentation column.
 
 ## Authors
 Sangmin - Developer
