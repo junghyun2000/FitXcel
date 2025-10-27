@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
+import { BASE_URL } from "../utils/api";
 
 export default function RegisterScreen() {
   // State for email and password input fields
@@ -29,7 +30,7 @@ export default function RegisterScreen() {
     }
     try {
       // Send registration request to backend
-      const res = await fetch("http://localhost:4000/auth/register", {
+      const res = await fetch(`${BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
