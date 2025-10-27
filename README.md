@@ -1,12 +1,22 @@
 # FitXcel
 
-This project is a mobile application built with React Native (Expo) and a Node.js backend.
+This project is a mobile application built with React Native (Expo) and a Node.js backend. This app helps users plan workouts, log exercises, and track their fitness journey. It includes BMI and calorie tracking, exercise search, and gamified progress features.
 
 ## Technologies Used
 
-Frontend: React Native
+Frontend:
+- React Native
+- Axios (for API calls)
 
-Backend: Node.js
+Backend:
+- Node.js
+- Axios (for fetching external data)
+- MongoDB
+- render
+- sendgrid
+- pocketbase
+- zustand
+
 
 ## Features
 
