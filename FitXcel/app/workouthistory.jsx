@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BASE_URL } from "../utils/api";
 
 export default function WorkoutHistory() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function WorkoutHistory() {
         }
 
         // Make an authorised API request to get workout history
-        const res = await fetch("http://localhost:4000/workout", {
+        const res = await fetch(`${BASE_URL}/workout`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
