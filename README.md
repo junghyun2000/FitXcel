@@ -51,7 +51,7 @@ git clone https://github.com/junghyun2000/FitXcel.git
 ```
 
 ### 2. Install Dependencies
-#### Frontend
+### Frontend
 In the terminal change directory to FitXcel:
 ```
 cd FitXcel
@@ -60,7 +60,7 @@ and run:
 ```
 npm install
 ```
-#### Backend
+### Backend
 In a new terminal change directory to backend:
 ```
 cd backend
@@ -71,7 +71,7 @@ npm install
 ```
 ### 3. Run the App
 
-#### Start the Backend Server
+### Start the Backend Server
 
 In the terminal make sure you are inside the backend folder and run:
 ```
@@ -79,7 +79,7 @@ node index.js
 ```
 The backend will start
 
-#### Start the React Native App (frontend)
+### Start the React Native App (frontend)
 
 Open a new terminal, go to the FitXcel folder and run:
 ```
