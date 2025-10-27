@@ -1,6 +1,7 @@
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
+// Reuse a single MongoClient instance across the app lifecycle
 const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri);
 

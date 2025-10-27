@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
+// Resolve API origin; when building for production we expect EXPO_PUBLIC_API_BASE_URL to be set
 const BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:4000";
 
 export default function ResetPassword() {
@@ -27,6 +28,7 @@ export default function ResetPassword() {
     return true;
   }
 
+  // call the backend reset endpoint once the form validates
   async function handleSubmit() {
     if (!validate()) return;
     try {

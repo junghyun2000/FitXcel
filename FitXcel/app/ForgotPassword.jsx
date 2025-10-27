@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { useRouter } from "expo-router";
 
 // keep the same fetch style, but allow EXPO_PUBLIC_API_BASE_URL if set
+// Allow the API base to be overridden by Expo config, else fall back to local dev server
 const BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:4000";
 
 export default function ForgotPassword() {
@@ -11,6 +12,7 @@ export default function ForgotPassword() {
   const [devLink, setDevLink] = useState(null);
   const router = useRouter();
 
+  // Request a reset link for the provided email; backend always responds with 200 to avoid email enumeration
   async function handleSubmit() {
     if (!email.trim()) {
       Alert.alert("Missing email", "Please enter your email.");
