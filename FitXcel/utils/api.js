@@ -1,7 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const BASE_URL = 
-  process.env.EXPO_PUBLIC_API_BASE_URL || 'https://fitxcel.onrender.com';
+const PROD_BASE = 'https://fitxcel.onrender.com';
+const DEV_BASE = 'http://localhost:4000';
+
+const rawBase =
+  process.env.EXPO_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === 'production' ? PROD_BASE : DEV_BASE);
+
+export const BASE_URL = rawBase.replace(/\/+$/, '');
 
 async function authHeaders() {
   const token = await AsyncStorage.getItem('token');

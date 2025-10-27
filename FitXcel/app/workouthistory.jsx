@@ -1,39 +1,41 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity, } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BASE_URL } from "../utils/api";
 
 export default function WorkoutHistory() {
   const router = useRouter();
-  const [workouts, setWorkouts] = useState([]);
-  const [loading, setLoading] = useState(true);
 
+  // State variables
+  const [workouts, setWorkouts] = useState([]); // Stores list of user workouts
+  const [loading, setLoading] = useState(true); // Tracks loading state while fetching data
+
+  // Fetch workouts from backend API on component mount
   useEffect(() => {
     const fetchWorkouts = async () => {
       try {
+        // Retrieve authentication token from AsyncStorage
         const token = await AsyncStorage.getItem("token");
+
+        // If no token, prompt user to log in and stop loading
         if (!token) {
           Alert.alert("Not Logged In", "Please log in first.");
           setLoading(false);
           return;
         }
 
-        const res = await fetch("http://localhost:4000/workout", {
+        // Make an authorised API request to get workout history
+        const res = await fetch(`${BASE_URL}/workout`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         const data = await res.json();
 
+        // Handle successful response
         if (res.ok) {
+          // Format workouts safely, providing fallbacks for missing data
           const formattedWorkouts = (data.workouts || []).map((w, idx) => ({
             id: w.id ? w.id : `fallback-${idx}`,
             date: w.date ? new Date(w.date) : new Date(),
@@ -41,31 +43,38 @@ export default function WorkoutHistory() {
           }));
           setWorkouts(formattedWorkouts);
         } else {
+          // Handle errors returned from server
           Alert.alert("Error", data.error || "Failed to load workouts");
         }
       } catch (err) {
+        // Handle connection or parsing errors
         console.error(err);
         Alert.alert("Error", "Could not connect to server.");
       } finally {
+        // Stop loading indicator after API call completes
         setLoading(false);
       }
     };
 
     fetchWorkouts();
-  }, []);
+  }, []); // Empty dependency array ensures this runs once on mount
 
+  // Display loading spinner while data is being fetched
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+      <SafeAreaView
+        style={[styles.container, { justifyContent: "center", alignItems: "center" }]}
+      >
         <ActivityIndicator size="large" color="#22c55e" />
         <Text style={{ color: "#fff", marginTop: 10 }}>Loading workouts...</Text>
       </SafeAreaView>
     );
   }
 
+  //UI
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with back button */}
+      {/* Header section with back navigation */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Back</Text>
@@ -73,13 +82,16 @@ export default function WorkoutHistory() {
         <Text style={styles.headerTitle}>Workout History</Text>
       </View>
 
-      {/* Main scrollable content */}
+      {/* Scrollable content area displaying workout sessions */}
       <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
         {workouts.length === 0 ? (
+          // Message shown when no workout data is available
           <Text style={styles.noData}>No workouts logged yet.</Text>
         ) : (
+          // Map through each workout session and render details
           workouts.map((session) => (
             <View key={session.id} style={styles.sessionCard}>
+              {/* Display formatted session date */}
               <Text style={styles.sessionDate}>
                 {session.date.toLocaleString(undefined, {
                   weekday: "short",
@@ -92,12 +104,15 @@ export default function WorkoutHistory() {
                 })}
               </Text>
 
+              {/* Display exercises and sets for this workout */}
               {Object.keys(session.exercises).map((exerciseName) => (
                 <View
                   key={`${session.id}-${exerciseName}`}
                   style={styles.exerciseCard}
                 >
                   <Text style={styles.exerciseTitle}>{exerciseName}</Text>
+
+                  {/* List each set with weight and reps */}
                   {session.exercises[exerciseName].map((set, index) => (
                     <Text
                       key={`${session.id}-${exerciseName}-${index}`}
@@ -116,8 +131,13 @@ export default function WorkoutHistory() {
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0B1220", padding: 16 },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#0B1220", 
+    padding: 16 
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -133,14 +153,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
   },
-  backButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  backButtonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: "600" 
+  },
   headerTitle: {
     color: "#E5E7EB",
     fontSize: 20,
     fontWeight: "700",
     marginLeft: 16,
   },
-  noData: { color: "#E5E7EB", fontSize: 16, textAlign: "center", marginTop: 20 },
+  noData: { 
+    color: "#E5E7EB", 
+    fontSize: 16, 
+    textAlign: "center", 
+    marginTop: 20 
+  },
   sessionCard: {
     marginBottom: 24,
     padding: 14,
@@ -149,7 +178,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
   },
-  sessionDate: { color: "#94A3B8", fontSize: 14, marginBottom: 8, textAlign: "center" },
+  sessionDate: { 
+    color: "#94A3B8", 
+    fontSize: 14, 
+    marginBottom: 8, 
+    textAlign: "center" 
+  },
   exerciseCard: {
     marginBottom: 14,
     backgroundColor: "#0B1220",
@@ -164,5 +198,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 6,
   },
-  setText: { color: "#E5E7EB", fontSize: 16, marginLeft: 8 },
+  setText: { 
+    color: "#E5E7EB", 
+    fontSize: 16, 
+    marginLeft: 8 
+  },
 });

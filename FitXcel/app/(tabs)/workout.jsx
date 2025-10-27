@@ -1,41 +1,29 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { apiGet, apiPost, BASE_URL } from '../../utils/api';
+import { BASE_URL } from "../../utils/api";
 
 const exampleExercises = ["Bench Press", "Squats", "Deadlift"];
 
 export default function WorkoutLog() {
-  const insets = useSafeAreaInsets(); // for safe area padding
-  const router = useRouter(); // navigation
-  const { selectedExercise } = useLocalSearchParams();
+  const insets = useSafeAreaInsets(); // Handles safe area (top/bottom padding)
+  const router = useRouter(); // Navigation helper
+  const { selectedExercise } = useLocalSearchParams(); // Read param if user came from search screen
 
   // Dropdown state
-  const [open, setOpen] = useState(false); // controls dropdown open/close
-  const [exercise, setExercise] = useState(exampleExercises[0]); // selected exercise
-  const [items, setItems] = useState([]);
+  const [open, setOpen] = useState(false); // Controls dropdown open/close
+  const [exercise, setExercise] = useState(exampleExercises[0]); // Currently selected exercise
+  const [items, setItems] = useState([]); // Dropdown items list
 
+  // Custom exercise input and workout state
+  const [newExercise, setNewExercise] = useState(""); // New exercise text field
+  const [workouts, setWorkouts] = useState({}); // Stores sets per exercise
+  const [loading, setLoading] = useState(true); // Controls loading indicator
 
-  // Input state for custom exercises
-  const [newExercise, setNewExercise] = useState("");
-  const [workouts, setWorkouts] = useState({});
-  const [loading, setLoading] = useState(true);
-
+  // Load previously saved custom exercises from AsyncStorage
   useEffect(() => {
     async function loadExercises() {
       const saved = await AsyncStorage.getItem("customExercises");
@@ -50,6 +38,7 @@ export default function WorkoutLog() {
     loadExercises();
   }, []);
 
+  // Load dropdown items from AsyncStorage (persistent dropdown list)
   useEffect(() => {
     const loadDropdownItems = async () => {
       try {
@@ -61,11 +50,10 @@ export default function WorkoutLog() {
         console.error("Error loading saved dropdown:", error);
       }
     };
-
     loadDropdownItems();
   }, []);
 
-  // Fetch workouts from backend when component mounts
+  // Fetch previously logged workouts from backend
   useEffect(() => {
     async function fetchWorkouts() {
       try {
@@ -78,6 +66,7 @@ export default function WorkoutLog() {
 
         const data = await res.json();
         if (res.ok) {
+          // Transform server response into a format suitable for UI rendering
           const transformedWorkouts = {};
           Object.keys(data.workouts || {}).forEach((exName) => {
             const sets = Array.isArray(data.workouts[exName])
@@ -104,29 +93,32 @@ export default function WorkoutLog() {
     }
 
     fetchWorkouts();
-  }, []); // runs once when component mounts
+  }, []);
 
+  // Handle exercise passed from search screen (auto-add + save locally)
   useEffect(() => {
     const saveExerciseToStorage = async (exerciseName) => {
       try {
-        // Get the currently saved list
         const stored = await AsyncStorage.getItem("exerciseDropdownItems");
         let existing = stored ? JSON.parse(stored) : [];
 
-        // Check if it's already there
         const alreadyExists = existing.some(
           (item) => item.value.toLowerCase() === exerciseName.toLowerCase()
         );
 
         if (!alreadyExists) {
-          // Add new exercise and save merged list
           const newItem = { label: exerciseName, value: exerciseName };
           const updated = [...existing, newItem];
-          await AsyncStorage.setItem("exerciseDropdownItems", JSON.stringify(updated));
-          setItems(updated); // Update dropdown in state too
-          Alert.alert("Exercise Added", `${exerciseName} has been added to your exercise list.`);
+          await AsyncStorage.setItem(
+            "exerciseDropdownItems",
+            JSON.stringify(updated)
+          );
+          setItems(updated);
+          Alert.alert(
+            "Exercise Added",
+            `${exerciseName} has been added to your exercise list.`
+          );
         } else {
-          // If it already exists, just ensure it’s in the current dropdown
           setItems(existing);
         }
       } catch (error) {
@@ -135,13 +127,9 @@ export default function WorkoutLog() {
     };
 
     if (selectedExercise) {
-      // Save + merge in storage
+      // Save the passed-in exercise and add to workout list
       saveExerciseToStorage(selectedExercise);
-
-      // Select the exercise
       setExercise(selectedExercise);
-
-      // Add to workouts if needed
       setWorkouts((prev) => ({
         ...prev,
         [selectedExercise]:
@@ -150,7 +138,7 @@ export default function WorkoutLog() {
     }
   }, [selectedExercise]);
 
-
+  // Adds a selected exercise to the workout log
   const addExercise = () => {
     if (!workouts[exercise]) {
       setWorkouts({
@@ -160,11 +148,13 @@ export default function WorkoutLog() {
     }
   };
 
+  // Adds a completely new custom exercise (stored persistently)
   const addNewExercise = async () => {
     if (!newExercise.trim()) {
       Alert.alert("Error", "Please enter an exercise name.");
       return;
     }
+
     const formattedName = newExercise.trim();
     if (
       items.some(
@@ -174,19 +164,24 @@ export default function WorkoutLog() {
       Alert.alert("Duplicate", "This exercise already exists.");
       return;
     }
+
     const newItem = { label: formattedName, value: formattedName };
     setItems((prev) => [...prev, newItem]);
     setExercise(formattedName);
     setNewExercise("");
+
+    // Save custom exercise locally
     const saved = await AsyncStorage.getItem("customExercises");
     const existing = saved ? JSON.parse(saved) : [];
     await AsyncStorage.setItem(
       "customExercises",
       JSON.stringify([...existing, formattedName])
     );
+
     Alert.alert("Added", `${formattedName} added to exercises!`);
   };
 
+  // Adds another set to a given exercise
   const addSet = (exerciseName) => {
     const currentSets = workouts[exerciseName] || [];
     const newSet = {
@@ -200,22 +195,24 @@ export default function WorkoutLog() {
     });
   };
 
+  // Updates weight/reps input for a specific set
   const updateSet = (exerciseName, setId, field, value) => {
     const updatedSets = workouts[exerciseName].map((set) =>
       set.id === setId
         ? {
-            ...set,
-            [field]: value,
-            previousWeight:
-              field === "weight" && value ? value : set.previousWeight,
-            previousReps:
-              field === "reps" && value ? value : set.previousReps,
-          }
+          ...set,
+          [field]: value,
+          previousWeight:
+            field === "weight" && value ? value : set.previousWeight,
+          previousReps:
+            field === "reps" && value ? value : set.previousReps,
+        }
         : set
     );
     setWorkouts({ ...workouts, [exerciseName]: updatedSets });
   };
 
+  // Submits all workout data to the backend
   const finishWorkout = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -224,6 +221,7 @@ export default function WorkoutLog() {
         return;
       }
 
+      // Build payload with all non-empty sets
       const payloadWorkouts = {};
       Object.keys(workouts).forEach((exName) => {
         const sets = workouts[exName] || [];
@@ -243,6 +241,7 @@ export default function WorkoutLog() {
         return;
       }
 
+      // Send POST request
       const response = await fetch(`${BASE_URL}/workout`, {
         method: "POST",
         headers: {
@@ -257,6 +256,7 @@ export default function WorkoutLog() {
 
       Alert.alert("Success", "Workout saved!");
 
+      // Clear weight/reps but keep previous set data visible
       const clearedWorkouts = {};
       Object.keys(workouts).forEach((exName) => {
         const currentSets = workouts[exName] || [];
@@ -275,15 +275,22 @@ export default function WorkoutLog() {
     }
   };
 
+  // Show spinner while loading workouts
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safeContainer, { justifyContent: "center", alignItems: "center" }]}>
+      <SafeAreaView
+        style={[
+          styles.safeContainer,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
         <ActivityIndicator size="large" color="#22c55e" />
         <Text style={{ color: "#fff", marginTop: 10 }}>Loading workouts...</Text>
       </SafeAreaView>
     );
   }
 
+  // UI
   return (
     <SafeAreaView style={[styles.safeContainer, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
@@ -291,11 +298,15 @@ export default function WorkoutLog() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 16 }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 16 },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.title}>Log Workout</Text>
-          {/* Dropdown + custom exercise input */}
+
+          {/* Exercise selection dropdown */}
           <View style={styles.dropdownWrapper}>
             <DropDownPicker
               open={open}
@@ -309,14 +320,16 @@ export default function WorkoutLog() {
               textStyle={{ color: "#fff" }}
               dropDownContainerStyle={styles.dropdownContainer}
               zIndex={1000}
+              listMode="MODAL"
             />
 
+            {/* Button: Add selected exercise to workout list */}
             <TouchableOpacity style={styles.addButton} onPress={addExercise}>
               <Text style={styles.addButtonText}>+ Log Exercise</Text>
             </TouchableOpacity>
           </View>
 
-          {/* New input + button for adding custom exercise */}
+          {/* Custom exercise input */}
           <TextInput
             style={styles.newExerciseInput}
             placeholder="Add Custom Exercise"
@@ -325,6 +338,7 @@ export default function WorkoutLog() {
             onChangeText={setNewExercise}
           />
 
+          {/* Button: Save custom exercise */}
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: "#3b82f6" }]}
             onPress={addNewExercise}
@@ -332,7 +346,7 @@ export default function WorkoutLog() {
             <Text style={styles.addButtonText}>+ Add Custom Exercise</Text>
           </TouchableOpacity>
 
-          {/* Render workout cards for each exercise */}
+          {/* Display exercise cards with sets */}
           {Object.keys(workouts)
             .filter((exName) => workouts[exName]?.length > 0)
             .map((exName) => {
@@ -341,6 +355,7 @@ export default function WorkoutLog() {
                 <View key={exName} style={styles.exerciseCard}>
                   <Text style={styles.exerciseTitle}>{exName}</Text>
 
+                  {/* Render all sets for each exercise */}
                   {sets.map((set) => (
                     <View key={set.id} style={styles.setCard}>
                       <Text style={styles.setLabel}>Set {set.id}</Text>
@@ -350,6 +365,7 @@ export default function WorkoutLog() {
                           : "No previous"}
                       </Text>
 
+                      {/* Input row for weight and reps */}
                       <View style={styles.inputsRow}>
                         <TextInput
                           placeholder={
@@ -383,6 +399,7 @@ export default function WorkoutLog() {
                     </View>
                   ))}
 
+                  {/* Button: Add new set for this exercise */}
                   <TouchableOpacity
                     style={styles.addSetButton}
                     onPress={() => addSet(exName)}
@@ -393,7 +410,7 @@ export default function WorkoutLog() {
               );
             })}
 
-          {/* Navigate to search screen */}
+          {/* Navigation buttons */}
           <TouchableOpacity
             style={[styles.finishButton, { backgroundColor: "#3b82f6" }]}
             onPress={() => router.push("/workoutsearch")}
@@ -408,34 +425,47 @@ export default function WorkoutLog() {
             <Text style={styles.finishButtonText}>See Workout History</Text>
           </TouchableOpacity>
 
-          {/* Save workout button */}
+          {/* Submit button */}
           <TouchableOpacity style={styles.finishButton} onPress={finishWorkout}>
             <Text style={styles.finishButtonText}>Finish Workout</Text>
           </TouchableOpacity>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: "#0b0b0c",
-    alignItems: "center",
     paddingHorizontal: 16,
   },
-  scrollContent: { padding: 16, gap: 16 },
-  title: { fontSize: 22, fontWeight: "800", color: "#fff", alignSelf: "center" },
-  dropdownWrapper: { zIndex: 1000, marginBottom: 16 },
+  scrollContent: {
+    padding: 16,
+    width: "100%"
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#fff",
+    alignSelf: "center"
+  },
+  dropdownWrapper: {
+    zIndex: 1000,
+    marginBottom: 16
+  },
   dropdown: {
     backgroundColor: "#0f1016",
     borderColor: "#1f2530",
     borderRadius: 12,
     marginBottom: 8,
   },
-  dropdownContainer: { backgroundColor: "#0f1016", borderColor: "#1f2530" },
+  dropdownContainer: {
+    backgroundColor: "#0f1016",
+    borderColor: "#1f2530"
+  },
   addButton: {
     backgroundColor: "#22c55e",
     paddingVertical: 10,
@@ -443,12 +473,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 8,
   },
-  addButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  addButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700"
+  },
   exerciseCard: {
     backgroundColor: "#121318",
     borderRadius: 14,
     padding: 16,
     marginBottom: 16,
+    width: "100%",
+    alignSelf: "stretch",
   },
   exerciseTitle: {
     fontSize: 18,
@@ -462,12 +498,18 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 10,
   },
-  setLabel: { color: "#22c55e", fontWeight: "600", marginBottom: 4 },
-  previous: { color: "#9ca3af", marginBottom: 8 },
+  setLabel: {
+    color: "#22c55e",
+    fontWeight: "600",
+    marginBottom: 4
+  },
+  previous: {
+    color: "#9ca3af",
+    marginBottom: 8
+  },
   input: {
     flex: 1,
     minWidth: 60,
-    maxWidth: "48%",
     backgroundColor: "#0f1016",
     borderWidth: 1,
     borderColor: "#1f2530",
@@ -479,7 +521,6 @@ const styles = StyleSheet.create({
   },
   inputsRow: {
     flexDirection: "row",
-    gap: 8,
     flex: 1,
     justifyContent: "space-between",
   },
@@ -490,7 +531,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 6,
   },
-  addSetButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  addSetButtonText: { 
+    color: "#fff", 
+    fontSize: 15, 
+    fontWeight: "600" 
+  },
   finishButton: {
     backgroundColor: "#ef4444",
     paddingVertical: 12,
@@ -498,7 +543,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 20,
   },
-  finishButtonText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  finishButtonText: { 
+    color: "#fff", 
+    fontSize: 17, 
+    fontWeight: "700" 
+  },
   newExerciseInput: {
     backgroundColor: "#0f1016",
     borderColor: "#1f2530",
