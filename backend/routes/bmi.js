@@ -11,6 +11,7 @@ router.post('/', auth, async (req, res) => {
   try {
     const { heightCm, weightKg, age, sex, bmi, loggedAt, day } = req.body || {};
 
+    // coerce incoming payload while guarding against NaN
     const h = Number(heightCm);
     const w = Number(weightKg);
     const a = Number(age);
@@ -36,6 +37,7 @@ router.post('/', auth, async (req, res) => {
 
     const db = await connectDB();
 
+    // persist user-specific entry so later history fetches are filtered by userId
     const doc = {
       userId: req.user.id,
       heightCm: h,
@@ -84,6 +86,7 @@ router.get('/history', auth, async (req, res) => {
       })
       .toArray();
 
+    // normalize ObjectId and Date fields so the client receives serializable primitives
     const normalized = items.map((it) => ({
       ...it,
       _id: it._id instanceof ObjectId ? it._id.toString() : String(it._id),
