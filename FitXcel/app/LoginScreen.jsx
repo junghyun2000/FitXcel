@@ -16,15 +16,18 @@ import { useFonts } from "expo-font";
 import { BASE_URL } from "../utils/api";
 
 export default function LoginScreen() {
+  // Track the form fields so inputs stay in sync with state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
 
+  // Lazy load the display font; rendering early causes layout jumps
   const [fontsLoaded] = useFonts({
     MontserratBold: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
   if (!fontsLoaded) return null;
 
+  // Submit credentials to the API and persist the session token on success
   async function handleLogin() {
     try {
       const res = await fetch(`${BASE_URL}/auth/login`, {
@@ -55,9 +58,11 @@ export default function LoginScreen() {
           behavior={Platform.select({ ios: "padding", android: undefined })}
           style={styles.inner}
         >
+          {/* UI headline */}
           <Text style={[styles.title, { fontFamily: "MontserratBold" }]}>FitXcel</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
 
+          {/* Email field */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -71,6 +76,7 @@ export default function LoginScreen() {
             />
           </View>
 
+          {/* Password field */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <TextInput
@@ -83,10 +89,12 @@ export default function LoginScreen() {
             />
           </View>
 
+          {/* Primary submit button */}
           <TouchableOpacity style={styles.button} onPress={handleLogin}>
             <Text style={styles.buttonText}>Login</Text>
           </TouchableOpacity>
 
+          {/* Secondary navigation links */}
           <TouchableOpacity onPress={() => router.replace("/RegisterScreen")}>
             <Text style={styles.link}>Do not have an account? Register</Text>
           </TouchableOpacity>
