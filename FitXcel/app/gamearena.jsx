@@ -11,7 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Audio } from "expo-av";
 import * as Haptics from "expo-haptics";
-import { apiGet } from "../utils/api";
+import { apiGet, apiPost } from "../utils/api";
 import { useLocalSearchParams } from "expo-router";
 import { getSocket } from "../utils/socket";
 import { useRouter } from "expo-router";
@@ -39,7 +39,7 @@ export default function GameArena() {
   // SOCKET HANDLING
   useEffect(() => {
     const socket = getSocket();
-    console.log("🎮 GameArena mounted, socket id:", socket.id);
+    console.log("GameArena mounted, socket id:", socket.id);
 
     loadStats();
     preloadSounds();
@@ -47,7 +47,7 @@ export default function GameArena() {
     // Always listen for attacks immediately
     socket.off("attackEvent");
     socket.on("attackEvent", (data) => {
-      console.log("📡 attackEvent received:", data);
+      console.log("attackEvent received:", data);
       if (data.from === socket.id) return; // ignore own attack
 
       setPlayer((prev) => {
@@ -61,18 +61,21 @@ export default function GameArena() {
       if (player && player.hp - data.damage <= 0) {
         playSound("lose");
         setWinner("Enemy wins!");
-        setLog((p) => ["💀 You were defeated!", ...p]);
+        setLog((p) => ["You were defeated!", ...p]);
       }
     });
 
     socket.off("checkVictory");
     socket.on("checkVictory", () => {
+      let isWinner = false;
+
       setEnemy((prevEnemy) => {
         if (prevEnemy && prevEnemy.hp <= 0) {
           playSound("win");
           playerVictoryPose();
           setWinner("You win!");
-          setLog((p) => ["🎉 You defeated the enemy!", ...p]);
+          setLog((p) => ["You defeated the enemy!", ...p]);
+          isWinner = true;
         }
         return prevEnemy;
       });
@@ -81,10 +84,22 @@ export default function GameArena() {
         if (prevPlayer && prevPlayer.hp <= 0) {
           playSound("lose");
           setWinner("Enemy wins!");
-          setLog((p) => ["💀 You were defeated!", ...p]);
+          setLog((p) => ["You were defeated!", ...p]);
         }
         return prevPlayer;
       });
+
+      if (isWinner && mode === "pvp") {
+        (async () => {
+          try {
+            await apiPost("/profile", { xp: 50 });
+            setLog((p) => ["+50 XP gained for PvP victory!", ...p]);
+            spawnFloatText("+50 XP", "#4FC3F7", "player", -20);
+          } catch (err) {
+            console.warn("XP award failed:", err);
+          }
+        })();
+      }
     });
 
     socket.off("battleEnd");
