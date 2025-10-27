@@ -64,8 +64,6 @@ npm install
 
 #### Start the Backend Server
 
-
-
 In the terminal make sure you are inside the backend folder and run:
 ```
 node index.js
@@ -87,6 +85,10 @@ Android emulator
 iOS simulator
 
 Physical device using the Expo Go app
+
+4. Check Trello board
+
+The GitHub API key must be added to the .env file
 
 ## Authors
 Sangmin - Developer
