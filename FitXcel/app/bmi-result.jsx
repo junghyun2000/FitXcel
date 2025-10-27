@@ -57,6 +57,7 @@ export default function BmiResultScreen() {
   const hM = height ? height / 100 : 0;
   const wKg = weight || 0;
 
+  // derive BMI, category, and estimated body-fat only when inputs change
   const { bmi, category, bf } = useMemo(() => {
     const cats = getCategoriesFor(sex);
     const val = !hM || !wKg ? NaN : wKg / (hM * hM);
@@ -70,6 +71,7 @@ export default function BmiResultScreen() {
   const bfText = isFinite(bf) ? `${Math.max(0, Math.round(bf))}%` : "--";
   const cats = getCategoriesFor(sex);
 
+  // persist the current reading to the backend, then jump to history
   const onSave = async () => {
     if (!isFinite(bmi)) {
       Alert.alert("Enter values", "Invalid height/weight.");

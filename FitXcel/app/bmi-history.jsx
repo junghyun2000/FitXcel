@@ -15,17 +15,19 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { apiGet } from "../utils/api";
 
 export default function BmiHistoryScreen() {
+  // respect safe areas when laying out scroll regions
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [items, setItems] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Pull the latest BMI history from the backend and keep local state in sync
   const fetchHistory = async () => {
     setRefreshing(true);
     try {
       const data = await apiGet("/bmi/history");
       const arr = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
-      // Normalize fields and sort newest first
+      // Normalize various shapes coming from the server and sort newest first
       const normalized = arr
         .map((it) => {
           const created =
@@ -62,6 +64,7 @@ export default function BmiHistoryScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // refetch whenever the screen regains focus so history stays fresh
       fetchHistory();
     }, [])
   );

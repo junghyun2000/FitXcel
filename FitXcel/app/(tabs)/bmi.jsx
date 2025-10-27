@@ -16,11 +16,13 @@ export default function BmiInputScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  // keep form fields controlled so we can pass them to the result screen
   const [sex, setSex] = useState("male");
   const [age, setAge] = useState("23");
   const [height, setHeight] = useState("180");
   const [weight, setWeight] = useState("70.1");
 
+  // navigate to the result view and carry the raw inputs as query params
   const onCompute = () => {
     router.push({
       pathname: "/bmi-result",
