@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "reac
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
+import { BASE_URL } from "../utils/api";
 
 export default function LoginScreen() {
   // State for email and password input fields
@@ -21,7 +22,7 @@ export default function LoginScreen() {
   async function handleLogin() {
     try {
       // Send login request to backend
-      const res = await fetch("http://localhost:4000/auth/login", {
+      const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

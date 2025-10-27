@@ -13,12 +13,14 @@ const mealsRoutes = require('./routes/meals');
 const plansRoutes = require('./routes/plans');
 const workoutRoutes = require('./routes/workout');
 const profileRoutes = require('./routes/profile');
+const bmiRoutes = require('./routes/bmi');
 
 app.use('/auth', authRoutes);
 app.use('/workout', workoutRoutes);
 app.use('/meals', mealsRoutes);
 app.use('/plans', plansRoutes);
 app.use('/profile', profileRoutes);
+app.use('/bmi', bmiRoutes);
 
 app.get('/__health', (req, res) => res.status(200).send('ok'));
 
