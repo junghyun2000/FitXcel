@@ -52,7 +52,7 @@ git clone https://github.com/junghyun2000/FitXcel.git
 
 ### 2. Install Dependencies
 #### Frontend
-In the terminal, run:
+In the terminal change directory to FitXcel and run:
 ```
 cd FitXcel
 ```
@@ -60,7 +60,7 @@ cd FitXcel
 npm install
 ```
 #### Backend
-In a new terminal, run:
+In a new terminal change directory to backend and run:
 ```
 cd backend
 ```
