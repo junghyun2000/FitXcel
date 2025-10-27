@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import { BASE_URL } from "../utils/api";
 
 export default function RegisterScreen() {
+  // Controlled inputs so we can validate prior to submission
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function RegisterScreen() {
     return /\S+@\S+\.\S+/.test(val);
   }
 
+  // Validate user data and create a new account via the API
   async function handleRegister() {
     if (!isValidEmail(email.trim())) {
       Alert.alert("Invalid Email", "Please enter a valid email address.");
@@ -60,9 +62,11 @@ export default function RegisterScreen() {
           behavior={Platform.select({ ios: "padding", android: undefined })}
           style={styles.inner}
         >
+          {/* Headline copy */}
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Register to get started</Text>
 
+          {/* Email input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -76,6 +80,7 @@ export default function RegisterScreen() {
             />
           </View>
 
+          {/* Password input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <TextInput
@@ -88,10 +93,12 @@ export default function RegisterScreen() {
             />
           </View>
 
+          {/* Submit button */}
           <TouchableOpacity style={styles.button} onPress={handleRegister}>
             <Text style={styles.buttonText}>Register</Text>
           </TouchableOpacity>
 
+          {/* Alternate navigation */}
           <TouchableOpacity onPress={() => router.replace("/LoginScreen")}>
             <Text style={styles.link}>Already have an account? Login</Text>
           </TouchableOpacity>
