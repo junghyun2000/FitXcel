@@ -5,7 +5,7 @@ const connectDB = require('./db');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // accept JSON bodies for API routes
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -22,6 +22,7 @@ app.use('/plans', plansRoutes);
 app.use('/profile', profileRoutes);
 app.use('/bmi', bmiRoutes);
 
+// simple uptime probe used by Render/on-call checks
 app.get('/__health', (req, res) => res.status(200).send('ok'));
 
 app.get('/__whoami', (req, res) => {
