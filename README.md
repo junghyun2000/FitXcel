@@ -36,7 +36,6 @@ Backend:
 - Saved Meals Page for viewing and reusing previous meal entries.
 
 
-
 ## Installation & Setup
 
 ### 1. Clone the Repository
@@ -86,9 +85,9 @@ iOS simulator
 
 Physical device using the Expo Go app
 
-4. Check Trello board
+4. Reset password feature
 
-The GitHub API key must be added to the .env file
+The SENDGRID API key must be added to the .env file in the backend folder (You can find the SENDGRID API key in the "GITHUB - SENDGRID API KEY" card in the sprint 2 documentation column).
 
 ## Authors
 Sangmin - Developer
