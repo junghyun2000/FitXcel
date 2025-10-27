@@ -4,8 +4,8 @@ let socket;
 
 export const getSocket = () => {
   if (!socket) {
-    socket = io("http://localhost:4000", {
-      transports: ["websocket", "polling"],
+    socket = io("https://fitxcel.onrender.com", {
+      transports: ["websocket"],
       forceNew: false, 
       autoConnect: true,
     });

@@ -6,7 +6,7 @@ import io from "socket.io-client";
 import { apiGet } from "../../utils/api";
 import { getSocket } from "../../utils/socket";
 
-const SOCKET_URL = "http://localhost:4000"; // your backend URL
+const SOCKET_URL = "https://fitxcel.onrender.com"; // your backend URL
 
 export default function GameArenaJoin() {
   const router = useRouter();
