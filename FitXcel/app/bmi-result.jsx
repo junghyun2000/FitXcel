@@ -110,12 +110,11 @@ export default function BmiResultScreen() {
       }}
       edges={["top", "bottom"]}
     >
-      {/* Visible top bar with Back */}
-      <View style={{ padding: 16, flexDirection: "row", alignItems: "center" }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ paddingRight: 12, paddingVertical: 6 }}>
-          <Text style={{ color: "#e5e7eb", fontWeight: "900" }}>Back</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
-        <Text style={{ color: "#fff", fontSize: 20, fontWeight: "900" }}>BMI Result</Text>
+        <Text style={styles.headerTitle}>BMI Result</Text>
       </View>
 
       <ScrollView
@@ -124,8 +123,6 @@ export default function BmiResultScreen() {
           { paddingBottom: insets.bottom + 16 },
         ]}
       >
-        <Text style={styles.title}>Your BMI</Text>
-
         {/* Gauge */}
         <View style={styles.gaugeCard}>
           <Svg width={320} height={92}>
@@ -245,7 +242,23 @@ export default function BmiResultScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: { padding: 16, gap: 12 },
-  title: { fontSize: 22, fontWeight: "800", color: "#fff", alignSelf: "center", marginTop: 4 },
+  header: {
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0b0b0c",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1f2530",
+    position: "relative",
+  },
+  headerTitle: { color: "#fff", fontSize: 24, fontWeight: "900" },
+  backButton: {
+    position: "absolute",
+    left: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  backButtonText: { color: "#e5e7eb", fontWeight: "900" },
   gaugeCard: {
     backgroundColor: "#0f1016",
     borderWidth: 1,

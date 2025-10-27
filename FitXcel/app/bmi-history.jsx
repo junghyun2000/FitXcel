@@ -8,6 +8,7 @@ import {
   Platform,
   StatusBar,
   Alert,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -99,11 +100,11 @@ export default function BmiHistoryScreen() {
       edges={["top", "bottom"]}
     >
       {/* Visible top bar with Back */}
-      <View style={{ padding: 16, flexDirection: "row", alignItems: "center" }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ paddingRight: 12, paddingVertical: 6 }}>
-          <Text style={{ color: "#e5e7eb", fontWeight: "900" }}>Back</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
-        <Text style={{ color: "#fff", fontSize: 20, fontWeight: "900" }}>BMI History</Text>
+        <Text style={styles.headerTitle}>BMI History</Text>
       </View>
 
       <View style={{ flex: 1, padding: 16 }}>
@@ -124,3 +125,23 @@ export default function BmiHistoryScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0b0b0c",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1f2530",
+    position: "relative",
+  },
+  headerTitle: { color: "#fff", fontSize: 24, fontWeight: "900" },
+  backButton: {
+    position: "absolute",
+    left: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  backButtonText: { color: "#e5e7eb", fontWeight: "900" },
+});
