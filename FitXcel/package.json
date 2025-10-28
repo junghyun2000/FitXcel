@@ -48,6 +48,7 @@
     "jest-expo": "~53.0.10",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.20.0",
+    "pocketbase": "^0.26.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.6",

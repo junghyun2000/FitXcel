@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -12,8 +11,20 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, Stack } from "expo-router";
 import { apiGet, apiPost } from "../../utils/api";
+import Avatar from "../avatar";
 
-// Small progress bar component
+// XP system constants
+const BASE_XP = 100;
+const SCALING = 20;
+
+// Daily core tasks
+const DAILY_TASKS = [
+  { name: "Sleep 8 hours", xp: 20 },
+  { name: "Finish workout", xp: 30 },
+  { name: "Achieve calorie goal", xp: 25 },
+];
+
+// Progress bar component
 function ProgressBar({ progress, color }) {
   return (
     <View style={styles.progressBackground}>
@@ -32,12 +43,11 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
 
   const [profile, setProfile] = useState(null);
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState(DAILY_TASKS);
+  const [completed, setCompleted] = useState({});
+  const [locked, setLocked] = useState(false);
 
-  const BASE_XP = 100;
-  const SCALING = 20;
-
-  // Fetch profile data
+  // Fetch user profile
   const fetchProfile = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -45,10 +55,28 @@ export default function ProfileScreen() {
 
       const res = await apiGet("/profile");
       setProfile(res);
-      setTasks(res.tasks || []);
     } catch (err) {
       console.warn("Profile load error:", err);
       Alert.alert("Error", "Failed to load profile data");
+    }
+  };
+
+  // Load or reset user-specific daily tasks
+  const loadUserTasks = async (userId) => {
+    const today = new Date().toDateString();
+    const lastDateKey = `user_${userId}_lastTaskDate`;
+    const completedKey = `user_${userId}_completedTasks`;
+
+    const lastDate = await AsyncStorage.getItem(lastDateKey);
+    if (lastDate !== today) {
+      // Reset for a new day
+      await AsyncStorage.setItem(lastDateKey, today);
+      await AsyncStorage.removeItem(completedKey);
+      setCompleted({});
+      setLocked(false);
+    } else {
+      const saved = await AsyncStorage.getItem(completedKey);
+      if (saved) setCompleted(JSON.parse(saved));
     }
   };
 
@@ -56,50 +84,59 @@ export default function ProfileScreen() {
     fetchProfile();
   }, []);
 
-  // Handle logout
+  useEffect(() => {
+    if (profile?._id) loadUserTasks(profile._id);
+  }, [profile]);
+
+  // Handle task completion
+  const handleCompleteTask = async (task) => {
+    if (!profile?._id) return;
+    if (locked) return Alert.alert("You're done for today!", "All tasks completed 🎉");
+
+    const userId = profile._id;
+    const completedKey = `user_${userId}_completedTasks`;
+
+    const newCompleted = { ...completed, [task.name]: true };
+    setCompleted(newCompleted);
+    await AsyncStorage.setItem(completedKey, JSON.stringify(newCompleted));
+
+    // Award XP
+    try {
+      const updated = await apiPost("/profile", { xp: task.xp });
+      setProfile(updated);
+    } catch (err) {
+      console.warn("XP update failed:", err);
+    }
+
+    if (Object.keys(newCompleted).length === tasks.length) {
+      setLocked(true);
+      Alert.alert("Great job!", "You finished all daily tasks!");
+    }
+  };
+
+  // Logout
   const handleLogout = async () => {
     await AsyncStorage.removeItem("token");
     router.replace("/LoginScreen");
   };
 
-  // Handle completing a task
-  const handleCompleteTask = async (taskId, xp) => {
-    try {
-      const updated = await apiPost("/profile", { xp, taskId });
-      setProfile(updated);
-      setTasks(updated.tasks || []);
-    } catch (err) {
-      Alert.alert("Error", "Could not complete task");
-    }
-  };
-
+  // XP / Level calculations
   const level = profile?.level ?? 1;
   const experience = profile?.experience ?? 0;
   const xpThreshold = BASE_XP + (level - 1) * SCALING;
   const experienceProgress = (experience / xpThreshold) * 100;
-
-  const avatars = {
-    1: require("../../assets/images/level1.png"),
-    2: require("../../assets/images/level2.jpg"),
-    3: require("../../assets/images/level3.png"),
-    4: require("../../assets/images/level4.png"),
-  };
-  const avatar = avatars[level] || avatars[1];
+  const stats = profile?.stats || { strength: 10, stamina: 10, agility: 10 };
 
   return (
     <SafeAreaView
       style={[
         styles.container,
-        {
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom + 8,
-        },
+        { paddingTop: insets.top, paddingBottom: insets.bottom + 8 },
       ]}
     >
-      {/* Hide default header (so no double nav bar) */}
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Custom top header */}
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
@@ -107,17 +144,17 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Scrollable content */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 30 }}
       >
+        {/* Avatar */}
         <View style={styles.avatarContainer}>
-          <Image source={avatar} style={styles.avatar} />
+          <Avatar level={level} />
           <Text style={styles.avatarLevel}>Level {level}</Text>
         </View>
 
-        {/* XP and stats */}
+        {/* XP Progress */}
         <View style={styles.card}>
           <Text style={styles.subtitle}>Experience</Text>
           <Text style={styles.info}>
@@ -129,41 +166,44 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        {/* Tasks */}
+        {/* Daily Tasks */}
         <View style={styles.card}>
-          <Text style={styles.subtitle}>Gym Tasks</Text>
-          {tasks.map((task) => (
-            <View key={task.id} style={styles.taskBlock}>
-              <Text style={styles.taskLabel}>{task.name}</Text>
-              <ProgressBar progress={task.done ? 100 : 0} color="#FFB74D" />
-              <TouchableOpacity
-                style={[styles.bigButton, task.done && styles.buttonDisabled]}
-                onPress={() => handleCompleteTask(task.id, task.xp)}
-                disabled={task.done}
+          <Text style={styles.subtitle}>Daily Tasks</Text>
+          {tasks.map((task, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[
+                styles.taskButton,
+                completed[task.name] && styles.taskButtonDone,
+              ]}
+              onPress={() => handleCompleteTask(task)}
+              disabled={completed[task.name]}
+            >
+              <Text
+                style={[
+                  styles.taskText,
+                  completed[task.name] && styles.taskTextDone,
+                ]}
               >
-                <Text style={styles.bigButtonText}>
-                  {task.done ? "Completed" : `Complete (+${task.xp} XP)`}
-                </Text>
-              </TouchableOpacity>
-            </View>
+                {task.name} {completed[task.name] ? "✅" : `(+${task.xp} XP)`}
+              </Text>
+            </TouchableOpacity>
           ))}
         </View>
 
-        {/* Example navigation */}
+        {/* Stats navigation */}
         <TouchableOpacity
           style={[styles.bigButton, { backgroundColor: "#22C55E" }]}
           onPress={() => router.push("/StatsScreen")}
         >
           <Text style={styles.bigButtonText}>Go to Stats Screen</Text>
         </TouchableOpacity>
-
-        {/* Spacer to keep button above tab bar */}
-        <View style={{ height: insets.bottom }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -186,18 +226,25 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: "#E5E7EB", fontWeight: "600" },
   avatarContainer: { alignItems: "center", marginBottom: 20 },
-  avatar: { width: "100%", height: 240, resizeMode: "contain", marginBottom: 8 },
-  avatarLevel: { color: "#4FC3F7", fontSize: 18, fontWeight: "bold" },
+  avatarLevel: {
+    color: "#4FC3F7",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 8,
+  },
   card: {
     backgroundColor: "#1E1E1E",
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
   },
-  subtitle: { color: "#4FC3F7", fontSize: 18, fontWeight: "600", marginBottom: 12 },
+  subtitle: {
+    color: "#4FC3F7",
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
   info: { color: "#E0E0E0", fontSize: 14, marginBottom: 6 },
-  taskBlock: { marginBottom: 16 },
-  taskLabel: { color: "#fff", fontSize: 15, marginBottom: 6 },
   progressBackground: {
     height: 10,
     backgroundColor: "#333",
@@ -206,6 +253,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   progressFill: { height: "100%", borderRadius: 6 },
+  taskButton: {
+    backgroundColor: "#4FC3F7",
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginVertical: 6,
+    alignItems: "center",
+  },
+  taskButtonDone: { backgroundColor: "#4B5563" },
+  taskText: { color: "#121212", fontWeight: "600" },
+  taskTextDone: { color: "#9CA3AF", textDecorationLine: "line-through" },
   bigButton: {
     backgroundColor: "#4FC3F7",
     paddingVertical: 14,
@@ -214,5 +271,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   bigButtonText: { color: "#121212", fontWeight: "bold", fontSize: 16 },
-  buttonDisabled: { backgroundColor: "#555" },
 });
