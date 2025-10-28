@@ -14,8 +14,6 @@ Backend:
 - MongoDB
 - render
 - sendgrid
-- pocketbase
-- zustand
 
 
 ## Features
