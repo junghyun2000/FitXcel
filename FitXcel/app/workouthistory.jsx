@@ -71,7 +71,7 @@ export default function WorkoutHistory() {
     );
   }
 
-  //UI
+  // UI
   return (
     <SafeAreaView style={styles.container}>
       {/* Header section with back navigation */}
