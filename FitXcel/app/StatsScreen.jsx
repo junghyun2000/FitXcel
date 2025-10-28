@@ -1,14 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { apiGet, apiPost } from "../utils/api";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 
+const router = useRouter();
+
 function ProgressBar({ progress, color }) {
   return (
     <View style={styles.progressBackground}>
-      <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: color }]} />
+      <View
+        style={[styles.progressFill, { width: `${progress}%`, backgroundColor: color }]}
+      />
     </View>
   );
 }
@@ -20,7 +31,7 @@ export default function StatsScreen() {
   const [levelPoints, setLevelPoints] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Load profile data from backend
+  // Load profile data
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -41,7 +52,7 @@ export default function StatsScreen() {
     fetchProfile();
   }, []);
 
-  // Handle upgrading a specific stat
+  // Upgrade stats
   const handleUpgrade = async (stat) => {
     if (levelPoints <= 0) return;
 
@@ -57,7 +68,9 @@ export default function StatsScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+      <ThemedView
+        style={[styles.container, { justifyContent: "center", alignItems: "center" }]}
+      >
         <ActivityIndicator size="large" color="#4FC3F7" />
         <ThemedText style={{ marginTop: 10 }}>Loading stats...</ThemedText>
       </ThemedView>
@@ -86,7 +99,11 @@ export default function StatsScreen() {
           ))}
         </ThemedView>
 
-        <TouchableOpacity style={styles.bigButton} onPress={() => router.push("/(tabs)/profile")}>
+        {/* Navigation Back to Profile Screen */}
+        <TouchableOpacity
+          style={[styles.bigButton, { backgroundColor: "#22C55E" }]}
+          onPress={() => router.push("/")}
+        >
           <ThemedText style={styles.bigButtonText}>Back to Profile</ThemedText>
         </TouchableOpacity>
       </ScrollView>
@@ -96,13 +113,30 @@ export default function StatsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#121212" },
-  card: { backgroundColor: "#1E1E1E", padding: 16, borderRadius: 12, marginBottom: 20 },
+  card: {
+    backgroundColor: "#1E1E1E",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
   subtitle: { color: "#4FC3F7", fontSize: 18, fontWeight: "600", marginBottom: 12 },
   statBlock: { marginBottom: 20 },
   statLabel: { color: "#FFFFFF", marginBottom: 6, fontSize: 15 },
-  progressBackground: { height: 10, backgroundColor: "#333", borderRadius: 6, overflow: "hidden", marginBottom: 10 },
+  progressBackground: {
+    height: 10,
+    backgroundColor: "#333",
+    borderRadius: 6,
+    overflow: "hidden",
+    marginBottom: 10,
+  },
   progressFill: { height: "100%", borderRadius: 6 },
-  bigButton: { backgroundColor: "#4FC3F7", paddingVertical: 14, borderRadius: 10, marginTop: 8, alignItems: "center" },
+  bigButton: {
+    backgroundColor: "#4FC3F7",
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginTop: 8,
+    alignItems: "center",
+  },
   bigButtonText: { color: "#121212", fontWeight: "bold", fontSize: 16 },
   buttonDisabled: { backgroundColor: "#555" },
 });
