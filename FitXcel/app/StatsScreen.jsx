@@ -99,11 +99,7 @@ export default function StatsScreen() {
           ))}
         </ThemedView>
 
-        {/* Navigation Back to Profile Screen */}
-        <TouchableOpacity
-          style={[styles.bigButton, { backgroundColor: "#22C55E" }]}
-          onPress={() => router.push("/")}
-        >
+        <TouchableOpacity style={styles.bigButton} onPress={() => router.push("/")}>
           <ThemedText style={styles.bigButtonText}>Back to Profile</ThemedText>
         </TouchableOpacity>
       </ScrollView>

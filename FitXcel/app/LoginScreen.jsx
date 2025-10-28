@@ -1,112 +1,183 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useFonts } from 'expo-font';
+import { useFonts } from "expo-font";
+import { BASE_URL } from "../utils/api";
 
 export default function LoginScreen() {
-  // State for email and password input fields
+  // Track the form fields so inputs stay in sync with state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  // Load custom font
+  // Lazy load the display font; rendering early causes layout jumps
   const [fontsLoaded] = useFonts({
-    MontserratBold: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    MontserratBold: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
-  // Prevent rendering until font is loaded
   if (!fontsLoaded) return null;
 
-  // Handle login button press
+  // Submit credentials to the API and persist the session token on success
   async function handleLogin() {
     try {
-      // Send login request to backend
-      const res = await fetch("http://localhost:4000/auth/login", {
+      const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (res.ok) {
-        // Save token and redirect to home/tabs
         await AsyncStorage.setItem("token", data.token);
-        router.replace("/"); // Redirect to main app screen
+        router.replace("/");
       } else {
-        // Show error if login fails
         Alert.alert("Login Failed", data.error || "Unknown error");
       }
-    } catch (e) {
-      // Show error if server is unreachable
+    } catch (_err) {
       Alert.alert("Error", "Could not connect to server.");
     }
   }
 
   return (
-    <View style={styles.container}>
-      {/* App title with custom font */}
-      <Text style={[styles.title, { fontFamily: 'MontserratBold' }]}>FitXcel</Text>
-      <Text style={styles.subtitle}>Sign in to continue</Text>
-      {/* Email input */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          placeholder="Enter your email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-          placeholderTextColor="#888"
-        />
+    <ImageBackground
+      source={require("../assets/images/ed67011f18655c66be813bab8599d3c0.png")}
+      style={styles.background}
+      imageStyle={styles.image}
+    >
+      <View style={styles.overlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.select({ ios: "padding", android: undefined })}
+          style={styles.inner}
+        >
+          {/* UI headline */}
+          <Text style={[styles.title, { fontFamily: "MontserratBold" }]}>FitXcel</Text>
+          <Text style={styles.subtitle}>Sign in to continue</Text>
+
+          {/* Email field */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={styles.input}
+              placeholderTextColor="rgba(255,255,255,0.75)"
+            />
+          </View>
+
+          {/* Password field */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              style={styles.input}
+              placeholderTextColor="rgba(255,255,255,0.75)"
+            />
+          </View>
+
+          {/* Primary submit button */}
+          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+            <Text style={styles.buttonText}>Login</Text>
+          </TouchableOpacity>
+
+          {/* Secondary navigation links */}
+          <TouchableOpacity onPress={() => router.replace("/RegisterScreen")}>
+            <Text style={styles.link}>Do not have an account? Register</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.replace("/ForgotPassword")}>
+            <Text style={styles.link}>Forgot password?</Text>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
       </View>
-      {/* Password input */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Password</Text>
-        <TextInput
-          placeholder="Enter your password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={styles.input}
-          placeholderTextColor="#888"
-        />
-      </View>
-      {/* Login button */}
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
-      {/* Link to registration screen */}
-      <TouchableOpacity onPress={() => router.replace("/RegisterScreen")}>
-        <Text style={styles.link}>Do not have an account? Register</Text>
-      </TouchableOpacity>
-    </View>
+    </ImageBackground>
   );
 }
 
-// Styles for the login screen
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#111" },
-  title: { fontSize: 32, fontWeight: "700", marginBottom: 8, color: "#fff", textAlign: "center" },
-  subtitle: { fontSize: 16, color: "#ccc", marginBottom: 32, textAlign: "center" },
-  inputGroup: { marginBottom: 20 },
-  label: { fontSize: 16, color: "#fff", marginBottom: 6, marginLeft: 4 },
+  background: { flex: 1, backgroundColor: "#000" },
+  image: {
+    resizeMode: "cover",
+    transform: [{ translateX: 10 }, { translateY: 10 }, { scale: 1.05 }],
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  inner: {
+    flex: 1,
+    justifyContent: "center",
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 420,
+  },
+  title: {
+    fontSize: 40,
+    fontWeight: "800",
+    color: "#ffffff",
+    textAlign: "center",
+    marginBottom: 10,
+    textShadowColor: "rgba(0,0,0,0.75)",
+    textShadowRadius: 8,
+    textShadowOffset: { width: 0, height: 2 },
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "rgba(255,255,255,0.88)",
+    textAlign: "center",
+    marginBottom: 32,
+  },
+  inputGroup: { marginBottom: 18 },
+  label: {
+    fontSize: 15,
+    color: "rgba(255,255,255,0.88)",
+    marginBottom: 6,
+    marginLeft: 4,
+  },
   input: {
     borderWidth: 1,
-    borderColor: "#2563eb",
-    borderRadius: 8,
+    borderColor: "rgba(34,197,94,0.6)",
+    borderRadius: 10,
     padding: 12,
-    backgroundColor: "#222",
-    color: "#fff",
+    backgroundColor: "rgba(15,23,42,0.28)",
+    color: "#f8fafc",
     fontSize: 16,
   },
   button: {
-    backgroundColor: "#2563eb",
-    borderRadius: 8,
+    backgroundColor: "rgba(34,197,94,0.92)",
+    borderRadius: 10,
     padding: 16,
     alignItems: "center",
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(20,83,45,0.9)",
   },
-  buttonText: { color: "#fff", fontWeight: "700", fontSize: 18 },
-  link: { color: "#2563eb", marginTop: 12, textAlign: "center", fontSize: 16 },
+  buttonText: {
+    color: "#052e16",
+    fontWeight: "800",
+    fontSize: 18,
+  },
+  link: {
+    color: "rgba(255,255,255,0.88)",
+    marginTop: 10,
+    textAlign: "center",
+    fontSize: 15,
+  },
 });

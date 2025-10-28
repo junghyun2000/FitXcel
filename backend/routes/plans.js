@@ -3,6 +3,9 @@ const router = express.Router();
 const connectDB = require('../db');
 const auth = require('../middleware/auth');
 const { ObjectId } = require('mongodb');
+const cors = require('cors');
+
+console.log("✅ plans.js routes loaded");
 
 // Add a saved meal to today’s entries
 router.post('/today/add', auth, async (req, res) => {
@@ -157,5 +160,72 @@ router.delete('/today/entry/:id', auth, async (req, res) => {
   });
   res.json({ ok: true, deleted: result.deletedCount });
 });
+
+router.get(
+  '/history',
+  cors({
+    origin: [
+      'http://localhost:19006',
+      'http://127.0.0.1:19006',
+      'http://localhost:8081',
+      'https://fitxcel.onrender.com',
+    ],
+    methods: ['GET'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }),
+  auth,
+  async (req, res) => {
+    try {
+      const db = await connectDB();
+      const entries = db.collection('entries');
+      const userId = req.user.id;
+
+      const today = new Date();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+
+      console.log('📦 /plans/history for user:', userId);
+
+      const data = await entries.aggregate([
+        {
+          $match: {
+            userId,
+            createdAt: { $gte: thirtyDaysAgo },
+          },
+        },
+        {
+          $lookup: {
+            from: 'meals',
+            localField: 'mealId',
+            foreignField: '_id',
+            as: 'mealInfo',
+          },
+        },
+        {
+          $addFields: {
+            meal: { $arrayElemAt: ['$mealInfo', 0] },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            date: 1,
+            createdAt: 1,
+            caloriesAtAdd: 1,
+            name: { $ifNull: ['$meal.name', '$name'] },
+            mealType: { $ifNull: ['$meal.mealType', '$mealType'] },
+          },
+        },
+        { $sort: { createdAt: -1 } },
+      ]).toArray();
+
+      console.log('✅ entries found:', data.length);
+      res.json({ history: data });
+    } catch (err) {
+      console.error('❌ Error fetching history:', err);
+      res.status(500).json({ error: 'Failed to fetch calorie history' });
+    }
+  }
+);
 
 module.exports = router;
